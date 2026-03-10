@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GreenGrow — Sign In</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900:  #1b5e20;
+      --green-800:  #2e7d32;
+      --green-500:  #5aaa6e;
+      --green-200:  #a8ddb5;
+      --green-50:   #f0faf1;
+      --dark:       #0d2b14;
+      --text-main:  #1a2e1c;
+      --text-muted: #7a9b7e;
+      --border:     rgba(0,0,0,0.10);
+      --font-body:    'DM Sans', sans-serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --ease: cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ── FULL SCREEN SPLIT ── */
+    .split {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ══════════════════════════
+       LEFT — WHITE FORM PANEL
+    ══════════════════════════ */
+    .form-side {
+      flex: 0 0 44%;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 52px 64px 48px 200px;
+      overflow-y: auto;
+    }
+
+    /* Brand top-left */
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-shrink: 0;
+    }
+
+    .brand-icon {
+      width: 50px; height: 50px;
+      background: linear-gradient(135deg, var(--green-500), var(--green-800));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(90,170,110,0.28);
+    }
+
+    .brand-icon svg { width: 15px; height: 15px; stroke: #fff; }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    /* Form content */
+    .form-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0;
+      margin-top: 0;
+    }
+
+    .form-heading h1 {
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      color: var(--text-main);
+      line-height: 1.10;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .form-sub {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .form-group { width: 100%; max-width: 370px; }
+
+    /* Fields — minimal, no icons */
+    .field { margin-bottom: 14px; width: 100%; }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid #e0e7e0;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-family: var(--font-body);
+      color: var(--text-main);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+      -webkit-appearance: none;
+    }
+
+    /* password keeps room for toggle */
+    #password { padding-right: 44px; }
+
+    .input-wrap input:focus {
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(90,170,110,0.10);
+    }
+
+    .input-wrap input::placeholder { color: #b8c8b9; }
+
+    .toggle-pw {
+      position: absolute; right: 13px;
+      background: none; border: none;
+      cursor: pointer; color: #b8c8b9;
+      display: flex; align-items: center;
+      transition: color 0.18s; padding: 3px;
+    }
+
+    .toggle-pw:hover { color: var(--green-800); }
+    .toggle-pw svg { width: 16px; height: 16px; stroke: currentColor; }
+
+    /* Sign In button — full width matching inputs */
+    .btn-signin {
+      display: flex;
+      width: 100%;
+      justify-content: center;
+      align-items: center; gap: 8px;
+      padding: 13px 36px;
+      background: var(--green-800);
+      color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 0.93rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; margin-top: 8px;
+      box-shadow: 0 4px 14px rgba(46,125,50,0.22);
+      transition: background 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+    }
+
+    .btn-signin:hover:not(:disabled) {
+      background: var(--green-900);
+      box-shadow: 0 8px 22px rgba(46,125,50,0.30);
+      transform: translateY(-1px);
+    }
+
+    .btn-signin:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Messages */
+    .msg-box {
+      display: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-top: 14px;
+      align-items: flex-start; gap: 9px;
+      font-size: 0.84rem; font-weight: 600; line-height: 1.4;
+    }
+
+    .msg-box.show { display: flex; }
+    .msg-box svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; margin-top: 1px; }
+    .msg-box.error   { background: #fff5f5; border: 1.5px solid rgba(229,57,53,0.18); color: #c62828; }
+    .msg-box.success { background: var(--green-50); border: 1.5px solid rgba(46,125,50,0.18); color: var(--green-900); }
+
+    /* Bottom note */
+    .login-note {
+      font-size: 0.75rem;
+      color: #7a9b7e;
+      flex-shrink: 0;
+      margin-top: auto;
+      padding-top: 32px;
+    }
+
+    /* ══════════════════════════
+       RIGHT — DARK VISUAL PANEL
+    ══════════════════════════ */
+    .visual-side {
+      flex: 1;
+      background: var(--dark);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Glow blobs */
+    .glow-top {
+      position: absolute;
+      top: -140px; right: -100px;
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, rgba(90,170,110,0.22) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .glow-bottom {
+      position: absolute;
+      bottom: -120px; left: -80px;
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(46,125,50,0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    /* Dot grid */
+    .dot-grid {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+
+    /* Cloud shapes (like reference) */
+    .cloud {
+      position: absolute;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .cloud-1 { width: 180px; height: 90px; border-radius: 45px; top: 60px; right: -30px; }
+    .cloud-2 { width: 140px; height: 70px; border-radius: 35px; top: 30px; right: 80px; }
+    .cloud-3 { width: 160px; height: 80px; border-radius: 40px; bottom: 80px; left: -20px; }
+    .cloud-4 { width: 120px; height: 60px; border-radius: 30px; bottom: 110px; left: 80px; }
+
+    /* Illustration */
+    .illustration-wrap {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .plant-illustration {
+      width: min(280px, 38vw);
+      height: auto;
+      filter: drop-shadow(0 24px 48px rgba(0,0,0,0.40));
+      margin-bottom: 36px;
+    }
+
+    .visual-text {
+      text-align: center;
+      max-width: 340px;
+    }
+
+    .visual-text h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.4px;
+    }
+
+    .visual-text h2 em { font-style: italic; color: var(--green-200); }
+
+    .visual-text p {
+      font-size: 0.87rem;
+      color: rgba(255,255,255,0.42);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    .pill-row {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    }
+
+    .pill {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 20px;
+      padding: 7px 15px;
+      font-size: 0.76rem; font-weight: 600;
+      color: rgba(255,255,255,0.58);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .pill svg { width: 12px; height: 12px; stroke: var(--green-500); }
+
+    /* Floating stat cards */
+    .float-card {
+      position: absolute;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      z-index: 3;
+      padding: 14px 20px;
+    }
+
+    .float-card.top-right {
+      top: 44px; right: 44px;
+      animation: floatY 4s ease-in-out infinite;
+    }
+
+    .float-card.bottom-left {
+      bottom: 44px; left: 44px;
+      animation: floatY 4s ease-in-out infinite 2s;
+    }
+
+    @keyframes floatY {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .float-label {
+      font-size: 0.64rem; font-weight: 700;
+      color: rgba(255,255,255,0.36);
+      text-transform: uppercase; letter-spacing: 0.9px;
+      margin-bottom: 4px;
+    }
+
+    .float-val {
+      font-size: 1.3rem; font-weight: 700; color: #fff; line-height: 1;
+    }
+
+    .float-val span { font-size: 0.72rem; color: var(--green-200); font-weight: 600; margin-left: 5px; }
+
+    /* ── PLANT LOADER (unchanged) ── */
+    .plant-loader {
+      position: fixed; inset: 0;
+      background: var(--dark);
+      z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+
+    .plant-loader.fade-out { opacity: 0; pointer-events: none; }
+
+    .plant-container { position: relative; width: 80px; height: 100px; }
+
+    .pot {
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 54px; height: 36px; background: #8B5E3C;
+      border-radius: 4px 4px 8px 8px;
+      clip-path: polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%);
+    }
+
+    .soil {
+      position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+      width: 56px; height: 10px; background: #5C3D1E; border-radius: 2px;
+    }
+
+    .stem { position: absolute; bottom: 42px; left: 50%; width: 4px; background: #2e7d32; border-radius: 2px; transform-origin: bottom center; }
+    .stem-1 { height: 0; animation: growStem 0.4s 0.3s ease forwards; transform: translateX(-50%); }
+    .stem-2 { height: 0; animation: growStem 0.4s 0.5s ease forwards; transform: translateX(-50%) rotate(-18deg); }
+    .stem-3 { height: 0; animation: growStem 0.4s 0.7s ease forwards; transform: translateX(-50%) rotate(18deg); }
+
+    .leaf { position: absolute; width: 18px; height: 26px; background: #43a047; border-radius: 50% 0 50% 0; opacity: 0; }
+    .leaf-1 { bottom: 72px; left: 20px; animation: growLeaf 0.35s 0.75s ease forwards; }
+    .leaf-2 { bottom: 72px; right: 20px; transform: scaleX(-1); animation: growLeaf 0.35s 0.85s ease forwards; }
+    .leaf-3 { bottom: 82px; left: 24px; animation: growLeaf 0.35s 0.95s ease forwards; }
+    .leaf-4 { bottom: 82px; right: 24px; transform: scaleX(-1); animation: growLeaf 0.35s 1.05s ease forwards; }
+
+    @keyframes growStem { to { height: 32px; } }
+    @keyframes growLeaf { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+
+    .loading-text {
+      color: rgba(255,255,255,0.70); font-size: 0.88rem; font-weight: 600;
+      letter-spacing: 1.5px; font-family: var(--font-body);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+    /* Responsive */
+    @media (max-width: 820px) {
+      .visual-side { display: none; }
+      .form-side { flex: 1; padding: 48px 40px; }
+      html, body { overflow: auto; }
+      .split { height: auto; min-height: 100vh; }
+    }
+
+    @media (max-width: 480px) {
+      .form-side { padding: 40px 28px; }
+      .form-heading h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Plant Loader -->
+  <div class="plant-loader" id="plantLoader">
+    <div class="plant-container">
+      <div class="pot"></div>
+      <div class="soil"></div>
+      <div class="stem stem-1"></div>
+      <div class="stem stem-2"></div>
+      <div class="stem stem-3"></div>
+      <div class="leaf leaf-1"></div>
+      <div class="leaf leaf-2"></div>
+      <div class="leaf leaf-3"></div>
+      <div class="leaf leaf-4"></div>
+    </div>
+    <p class="loading-text">Growing...</p>
+  </div>
+
+  <div class="split">
+
+    <!-- ── LEFT: FORM ── -->
+    <div class="form-side">
+
+      <div class="brand-mark">
+        <div class="brand-icon"><i data-lucide="leaf"></i></div>
+        <div class="brand-name">GreenGrow</div>
+      </div>
+
+      <div class="form-content">
+        <div class="form-heading">
+          <h1>Holla,<br>Welcome Back</h1>
+        </div>
+        <p class="form-sub">Hey, welcome back to your admin panel.</p>
+
+        <div class="form-group">
+          <div class="field">
+            <div class="input-wrap">
+              <input type="email" id="email" placeholder="stanley@gmail.com" autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="input-wrap">
+              <input type="password" id="password" placeholder="••••••••••" autocomplete="current-password" />
+              <button class="toggle-pw" type="button" onclick="togglePassword()">
+                <i data-lucide="eye" id="eyeIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-signin" id="loginBtn" onclick="handleLogin()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnText">Sign In</span>
+          </button>
+
+          <div class="msg-box error" id="errorBox">
+            <i data-lucide="alert-circle"></i>
+            <span id="errorText"></span>
+          </div>
+
+          <div class="msg-box success" id="successBox">
+            <i data-lucide="check-circle"></i>
+            <span id="successText"></span>
+          </div>
+        </div>
+      </div>
+
+      <p class="login-note">Authorized personnel only &mdash; GreenGrow &copy; 2026</p>
+
+    </div>
+
+    <!-- ── RIGHT: VISUAL ── -->
+    <div class="visual-side">
+      <div class="dot-grid"></div>
+      <div class="glow-top"></div>
+      <div class="glow-bottom"></div>
+
+      <!-- Cloud shapes -->
+      <div class="cloud cloud-1"></div>
+      <div class="cloud cloud-2"></div>
+      <div class="cloud cloud-3"></div>
+      <div class="cloud cloud-4"></div>
+
+      <!-- Floating stat cards -->
+      <div class="float-card top-right">
+        <div class="float-label">Active Sellers</div>
+        <div class="float-val">50+ <span>↑ growing</span></div>
+      </div>
+
+      <div class="float-card bottom-left">
+        <div class="float-label">Plant Species</div>
+        <div class="float-val">100+ <span>varieties</span></div>
+      </div>
+
+      <!-- Illustration + text -->
+      <div class="illustration-wrap">
+        <svg class="plant-illustration" viewBox="0 0 280 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Shadow -->
+          <ellipse cx="140" cy="284" rx="58" ry="8" fill="rgba(0,0,0,0.22)"/>
+          <!-- Pot -->
+          <path d="M103 228 L177 228 L165 268 L115 268 Z" fill="#6D4C2A"/>
+          <rect x="94" y="215" width="92" height="17" rx="8" fill="#8B5E3C"/>
+          <!-- Soil -->
+          <ellipse cx="140" cy="215" rx="46" ry="9" fill="#5C3D1E"/>
+          <!-- Main stem -->
+          <path d="M140 215 Q137 172 140 122" stroke="#2e7d32" stroke-width="7" stroke-linecap="round"/>
+          <!-- Branches -->
+          <path d="M139 168 Q110 150 88 160" stroke="#2e7d32" stroke-width="5" stroke-linecap="round"/>
+          <path d="M140 148 Q168 130 190 140" stroke="#2e7d32" stroke-width="5" stroke-linecap="round"/>
+          <path d="M139 188 Q117 176 103 182" stroke="#43a047" stroke-width="4" stroke-linecap="round"/>
+          <!-- Left big leaf -->
+          <ellipse cx="79" cy="153" rx="32" ry="17" fill="#43a047" transform="rotate(-22 79 153)"/>
+          <ellipse cx="79" cy="153" rx="25" ry="12" fill="#5aaa6e" transform="rotate(-22 79 153)" opacity="0.5"/>
+          <!-- Leaf vein -->
+          <path d="M66 162 Q79 153 92 144" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Right big leaf -->
+          <ellipse cx="197" cy="133" rx="30" ry="16" fill="#2e7d32" transform="rotate(20 197 133)"/>
+          <ellipse cx="197" cy="133" rx="24" ry="11" fill="#43a047" transform="rotate(20 197 133)" opacity="0.5"/>
+          <path d="M183 142 Q197 133 211 124" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Small left leaf -->
+          <ellipse cx="99" cy="177" rx="20" ry="11" fill="#5aaa6e" transform="rotate(-28 99 177)"/>
+          <!-- Top cluster -->
+          <ellipse cx="134" cy="110" rx="22" ry="14" fill="#43a047" transform="rotate(-14 134 110)"/>
+          <ellipse cx="150" cy="98" rx="20" ry="13" fill="#2e7d32" transform="rotate(24 150 98)"/>
+          <ellipse cx="122" cy="98" rx="18" ry="12" fill="#5aaa6e" transform="rotate(-34 122 98)"/>
+          <!-- Berry dots -->
+          <circle cx="90" cy="146" r="7" fill="#a8ddb5"/>
+          <circle cx="90" cy="146" r="4" fill="#e8f5e9"/>
+          <circle cx="189" cy="127" r="6" fill="#a8ddb5"/>
+          <circle cx="189" cy="127" r="3.5" fill="#e8f5e9"/>
+          <circle cx="141" cy="118" r="6" fill="#a8ddb5"/>
+          <circle cx="141" cy="118" r="3.5" fill="#e8f5e9"/>
+          <circle cx="105" cy="170" r="5" fill="#a8ddb5"/>
+        </svg>
+
+        <div class="visual-text">
+          <h2>Grow greener.<br><em>Act together.</em></h2>
+          <p>Driving forest restoration and climate resilience through sustainable plant commerce.</p>
+          <div class="pill-row">
+            <div class="pill"><i data-lucide="sprout"></i> Sustainable</div>
+            <div class="pill"><i data-lucide="globe"></i> Global</div>
+            <div class="pill"><i data-lucide="recycle"></i> Eco-Friendly</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    lucide.createIcons();
+
+    window.addEventListener('load', () => {
+      const loader = document.getElementById('plantLoader');
+      setTimeout(() => {
+        loader.classList.add('fade-out');
+        setTimeout(() => loader.style.display = 'none', 500);
+      }, 1500);
+    });
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(console.error);
+    auth.signOut().catch(console.error);
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const icon  = document.getElementById('eyeIcon');
+      const show  = input.type === 'password';
+      input.type  = show ? 'text' : 'password';
+      icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+      lucide.createIcons();
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+
+    function showError(msg) {
+      document.getElementById('errorText').textContent = msg;
+      document.getElementById('errorBox').classList.add('show');
+      document.getElementById('successBox').classList.remove('show');
+    }
+
+    function showSuccess(msg) {
+      document.getElementById('successText').textContent = msg;
+      document.getElementById('successBox').classList.add('show');
+      document.getElementById('errorBox').classList.remove('show');
+    }
+
+    function setLoading(on) {
+      document.getElementById('spinner').style.display = on ? 'block' : 'none';
+      document.getElementById('btnText').textContent   = on ? 'Signing in…' : 'Sign In';
+      document.getElementById('loginBtn').disabled     = on;
+    }
+
+    async function handleLogin() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      document.getElementById('errorBox').classList.remove('show');
+      document.getElementById('successBox').classList.remove('show');
+
+      if (!email || !password) { showError('Please enter both email and password.'); return; }
+
+      setLoading(true);
+      try {
+        const cred    = await auth.signInWithEmailAndPassword(email, password);
+        const userDoc = await db.collection('users').doc(cred.user.uid).get();
+        if (!userDoc.exists) throw new Error('User data not found. Please contact support.');
+        const data = userDoc.data();
+        if (data.status === 'suspended') { await auth.signOut(); throw new Error('Your account has been suspended.'); }
+        if (data.status === 'pending')   { await auth.signOut(); throw new Error('Your account is pending approval.'); }
+        showSuccess(`Welcome back, ${data.fullName || 'User'}!`);
+        setTimeout(() => { window.location.href = data.role === 'admin' ? 'admin.html' : 'index.html'; }, 1000);
+      } catch (err) {
+        setLoading(false);
+        const msgs = {
+          'auth/user-not-found':     'No account found with this email.',
+          'auth/invalid-credential': 'No account found with this email.',
+          'auth/wrong-password':     'Incorrect password. Please try again.',
+          'auth/invalid-email':      'Please enter a valid email address.',
+          'auth/too-many-requests':  'Too many failed attempts. Try again later.',
+        };
+        showError(msgs[err.code] || err.message);
+      }
+    }
+  </script>
+</body>
+</html>

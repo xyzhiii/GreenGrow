@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GreenGrow - Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .register-box {
+            background: white;
+            padding: 30px;
+            width: 350px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: gray;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 10px;
+            cursor: pointer;
+            color: #2e7d32;
+        }
+
+        .error {
+            color: red;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-box">
+    <h2>Create Account</h2>
+
+    <input type="text" id="firstName" placeholder="First Name">
+    <input type="text" id="lastName" placeholder="Last Name">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <input type="password" id="confirmPassword" placeholder="Confirm Password">
+
+    <div class="error" id="errorMsg"></div>
+
+    <button id="registerBtn">REGISTER</button>
+
+    <div class="login-link" onclick="goToLogin()">
+        Already have an account? Login
+    </div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ✅ Initialize Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+  authDomain: "greengrow-41922.firebaseapp.com",
+  projectId: "greengrow-41922",
+  storageBucket: "greengrow-41922.firebasestorage.app",
+  messagingSenderId: "12959500274",
+  appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const registerBtn = document.getElementById("registerBtn");
+const errorMsg = document.getElementById("errorMsg");
+
+registerBtn.addEventListener("click", async () => {
+
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const confirmPassword = document.getElementById("confirmPassword").value.trim();
+
+    errorMsg.innerText = "";
+
+    if (!firstName) return showError("First name is required");
+    if (!lastName) return showError("Last name is required");
+    if (!email) return showError("Email is required");
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) return showError("Please enter a valid email");
+
+    if (!password) return showError("Password is required");
+    if (password.length < 6) return showError("Password must be at least 6 characters");
+
+    if (!confirmPassword) return showError("Please confirm your password");
+    if (password !== confirmPassword) return showError("Passwords do not match");
+
+    registerBtn.disabled = true;
+    registerBtn.innerText = "Registering...";
+
+    try {
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+            userId: user.uid,
+            firstName,
+            lastName,
+            fullName: firstName + " " + lastName,
+            email,
+            phoneNumber: "",
+            role: "customer",
+            profileImage: "",
+            address: {
+                street: "",
+                municipality: "",
+                province: "",
+                zipCode: "",
+                country: ""
+            },
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            status: "active"
+        });
+
+        alert("Registration successful!");
+        window.location.href = "login.html";
+
+    } catch (error) {
+        showError(error.message);
+        registerBtn.disabled = false;
+        registerBtn.innerText = "REGISTER";
+        console.error(error);
+    }
+});
+
+function showError(message) {
+    errorMsg.innerText = message;
+}
+
+
+
+</script>
+
+</body>
+</html>

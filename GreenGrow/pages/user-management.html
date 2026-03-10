@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User Management — GreenGrow</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    body { overflow-x: hidden; }
+
+    /* Lucide icons inside stat cards */
+    .stat-icon-wrap i svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      display: block;
+    }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    /* 3-col stat row — responsive */
+    .stats-row-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 700px) {
+      .stats-row-3 { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) and (min-width: 701px) {
+      .stats-row-3 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Stat cards never squish below a readable size */
+    .stat-card { min-width: 0; }
+
+    /* Table column widths */
+    .admin-table { table-layout: fixed; width: 100%; min-width: 680px; }
+    .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
+    .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 180px; }
+    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 90px; }
+    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 100px; }
+    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 130px; }
+    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 180px; }
+
+    /* Keep dropdowns visible */
+    .card { overflow: visible !important; }
+    .table-wrap {
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+      width: 100%;
+    }
+    .admin-table, tbody, tr, td { overflow: visible !important; }
+
+    /* Tighter action buttons to prevent overflow */
+    .actions-cell { gap: 5px; }
+    .actions-cell .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOAST -->
+  <div class="toast" id="exportToast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Excel file downloaded!</span>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div class="modal-overlay" id="profileModal" onclick="closeProfileOnOverlay(event)">
+    <div class="profile-modal">
+      <div class="profile-modal-header">
+        <div class="profile-modal-avatar" id="modalAvatar">?</div>
+        <div>
+          <div class="profile-modal-name" id="modalName">—</div>
+          <div class="profile-modal-role" id="modalRole">—</div>
+        </div>
+        <button class="modal-close" onclick="closeProfile()">✕</button>
+      </div>
+      <div class="profile-modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>User Management</h1>
+      <p>Manage customers and sellers</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate">—</div>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div class="page-body">
+
+    <!-- STAT CARDS -->
+    <div class="stats-row-3">
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
+        <div class="stat-body">
+          <h3 id="statTotal">—</h3>
+          <p>Total Users</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-blue"><i data-lucide="user-check"></i></div>
+        <div class="stat-body">
+          <h3 id="statActive">—</h3>
+          <p>Active Users</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-red"><i data-lucide="user-x"></i></div>
+        <div class="stat-body">
+          <h3 id="statSuspended">—</h3>
+          <p>Suspended</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="card">
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <input type="text" id="userSearch" placeholder="Search users by name…" />
+
+        <!-- Role Filter -->
+        <div class="filter-wrap" id="roleWrap">
+          <button class="filter-btn" onclick="toggleFilterDropdown('roleWrap', event)">
+            <span id="roleLabel">All Roles</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="filter-dropdown" id="roleDropdown">
+            <p>Filter by role</p>
+            <button class="filter-option selected" data-value="all"      onclick="selectFilter('role', 'all',      'All Roles', event)">All Roles</button>
+            <button class="filter-option"          data-value="customer" onclick="selectFilter('role', 'customer', 'Customer',  event)">Customer</button>
+            <button class="filter-option"          data-value="seller"   onclick="selectFilter('role', 'seller',   'Seller',    event)">Seller</button>
+          </div>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="filter-wrap" id="statusWrap">
+          <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
+            <span id="statusLabel">All Status</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="filter-dropdown" id="statusDropdown">
+            <p>Filter by status</p>
+            <button class="filter-option selected"  data-value="all"       onclick="selectFilter('status', 'all',       'All Status', event)">All Status</button>
+            <button class="filter-option"           data-value="active"    onclick="selectFilter('status', 'active',    'Active',     event)">Active</button>
+            <button class="filter-option"           data-value="suspended" onclick="selectFilter('status', 'suspended', 'Suspended',  event)">Suspended</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr>
+              <td colspan="6" style="text-align:center; padding:28px; color:var(--text-muted);">Loading users…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TABLE FOOTER -->
+      <div class="table-footer">
+        <span class="table-footer-count" id="footerCount">Loading…</span>
+        <button class="export-btn" onclick="exportToExcel()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export to Excel
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        loadUsers();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
+
+    const SUSPEND_REASONS = ['Violation of Terms', 'Suspicious Activity', 'Fraud', 'Spam'];
+    const AVATAR_COLORS   = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+
+    let allUsers = [];
+    let activeFilters = { role: 'all', status: 'all' };
+
+    async function loadUsers() {
+      try {
+        const snap = await db.collection('users').get();
+        allUsers = [];
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (data.role === 'admin') return;
+          allUsers.push({ id: doc.id, ...data });
+        });
+        updateStats(allUsers);
+        applyFilters();
+      } catch (err) { console.error('Load users error:', err); }
+    }
+
+    function updateStats(users) {
+      document.getElementById('statTotal').textContent     = users.length;
+      document.getElementById('statActive').textContent    = users.filter(u => u.status === 'active').length;
+      document.getElementById('statSuspended').textContent = users.filter(u => u.status === 'suspended').length;
+    }
+
+    function applyFilters() {
+      const q      = document.getElementById('userSearch').value.toLowerCase();
+      const role   = activeFilters.role;
+      const status = activeFilters.status;
+
+      const filtered = allUsers.filter(u => {
+        const fullName = ((u.firstName || '') + ' ' + (u.lastName || '')).toLowerCase();
+        return fullName.includes(q)
+          && (role   === 'all' || u.role   === role)
+          && (status === 'all' || u.status === status);
+      });
+
+      renderUsersTable(filtered);
+
+      const count = filtered.length;
+      document.getElementById('footerCount').textContent =
+        count === allUsers.length
+          ? `Showing all ${count} users`
+          : `Showing ${count} of ${allUsers.length} users`;
+    }
+
+    function toggleFilterDropdown(wrapId, e) {
+      e.stopPropagation();
+      const wrap   = document.getElementById(wrapId);
+      const isOpen = wrap.classList.contains('open');
+      closeAllDropdowns();
+      if (!isOpen) wrap.classList.add('open');
+    }
+
+    function selectFilter(type, value, label, e) {
+      e.stopPropagation();
+      activeFilters[type] = value;
+      document.getElementById(type + 'Label').textContent = label;
+      const wrapId = type === 'role' ? 'roleWrap' : 'statusWrap';
+      document.querySelectorAll(`#${wrapId} .filter-option`).forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.value === value);
+      });
+      closeAllDropdowns();
+      applyFilters();
+    }
+
+    function toggleDropdown(id, e) {
+      e.stopPropagation();
+      const dropdown = document.getElementById(id);
+      const isOpen   = dropdown.classList.contains('open');
+      closeAllDropdowns();
+      if (!isOpen) {
+        const btn  = e.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        dropdown.style.top  = (rect.bottom + 4) + 'px';
+        dropdown.style.left = (rect.right - 210) + 'px';  // align right edge to button
+        dropdown.classList.add('open');
+      }
+    }
+
+    function closeAllDropdowns() {
+      document.querySelectorAll('.suspend-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.filter-wrap.open').forEach(d => d.classList.remove('open'));
+    }
+
+    document.addEventListener('click', closeAllDropdowns);
+
+    function getInitials(u) {
+      const f = (u.firstName || '').trim();
+      const l = (u.lastName  || '').trim();
+      if (f && l) return (f[0] + l[0]).toUpperCase();
+      if (f)      return f.slice(0,2).toUpperCase();
+      return '??';
+    }
+
+    function renderUsersTable(users) {
+      const tbody = document.getElementById('usersTable');
+
+      if (!users.length) {
+        tbody.innerHTML = `
+          <tr><td colspan="6">
+            <div class="empty-state">
+              <div class="empty-icon">👤</div>
+              <p>No users match your search.</p>
+            </div>
+          </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = users.map((u, i) => {
+        const fullName   = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
+        const initials   = getInitials(u);
+        const color      = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
+        const statusBadge = u.status === 'active'
+          ? '<span class="badge-active">Active</span>'
+          : u.status === 'suspended'
+          ? '<span class="badge-inactive">Suspended</span>'
+          : '<span class="badge-pending">Pending</span>';
+
+        const roleClass = u.role === 'seller' ? 'role-seller' : u.role === 'admin' ? 'role-admin' : 'role-customer';
+        const roleBadge = `<span class="role-badge ${roleClass}">${u.role || '—'}</span>`;
+
+        const reasonCol = u.status === 'suspended' && u.suspendReason
+          ? `<span class="reason-badge">${u.suspendReason}</span>`
+          : '<span style="color:var(--text-muted);font-size:0.85rem;">—</span>';
+
+        const suspendBtn = u.status === 'active'
+          ? `<div class="suspend-wrap">
+               <button class="btn-sm" onclick="toggleDropdown('dd-${u.id}', event)">Suspend ▾</button>
+               <div class="suspend-dropdown" id="dd-${u.id}">
+                 <p>Select reason</p>
+                 ${SUSPEND_REASONS.map(r => `<button class="reason-option" onclick="suspendWithReason('${u.id}', '${r}', event)">${r}</button>`).join('')}
+               </div>
+             </div>`
+          : `<button class="btn-sm approved" onclick="activateUser('${u.id}')">Activate</button>`;
+
+        return `
+          <tr>
+            <td style="color:var(--text-muted);font-size:0.82rem;">${i + 1}</td>
+            <td>
+              <div class="user-cell">
+                <div class="avatar-init" style="background:${color};">${initials}</div>
+                <span class="user-name">${fullName}</span>
+              </div>
+            </td>
+            <td>${roleBadge}</td>
+            <td>${statusBadge}</td>
+            <td>${reasonCol}</td>
+            <td>
+              <div class="actions-cell">
+                ${suspendBtn}
+                <button class="btn-sm view-profile-btn" onclick="openProfile('${u.id}')">View Profile</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function exportToExcel() {
+      if (!allUsers.length) { showToast('No users to export.'); return; }
+      const rows = allUsers.map((u, i) => ({
+        '#':              i + 1,
+        'First Name':     u.firstName     || '—',
+        'Last Name':      u.lastName      || '—',
+        'Email':          u.email         || '—',
+        'Phone':          u.phone         || '—',
+        'Role':           u.role          || '—',
+        'Status':         u.status        || '—',
+        'Suspend Reason': u.suspendReason || '—',
+        'Date Joined':    u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '—',
+        'Last Updated':   u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '—',
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      ws['!cols'] = [{wch:5},{wch:16},{wch:16},{wch:30},{wch:16},{wch:12},{wch:12},{wch:22},{wch:22},{wch:22}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Users');
+      XLSX.writeFile(wb, `greengrow_users_${new Date().toISOString().slice(0,10)}.xlsx`);
+      showToast(`✓ ${allUsers.length} users exported successfully!`);
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('exportToast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function openProfile(userId) {
+      const u     = allUsers.find(u => u.id === userId);
+      if (!u) return;
+      const color = AVATAR_COLORS[allUsers.indexOf(u) % AVATAR_COLORS.length];
+
+      document.getElementById('modalAvatar').textContent      = getInitials(u);
+      document.getElementById('modalAvatar').style.background = color;
+      document.getElementById('modalName').textContent        = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
+      document.getElementById('modalRole').textContent        = u.role || '—';
+
+      document.getElementById('modalBody').innerHTML = [
+        { label: 'Email',          value: u.email  || '—' },
+        { label: 'Phone',          value: u.phone  || '—' },
+        { label: 'Status',         value: u.status === 'active' ? 'Active' : u.status === 'suspended' ? 'Suspended' : 'Pending' },
+        { label: 'Suspend Reason', value: u.suspendReason || '—' },
+        { label: 'Joined',         value: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—' },
+        { label: 'Last Updated',   value: u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—' },
+      ].map(f => `
+        <div class="profile-field">
+          <span class="profile-field-label">${f.label}</span>
+          <span class="profile-field-value">${f.value}</span>
+        </div>`).join('');
+
+      document.getElementById('profileModal').classList.add('open');
+    }
+
+    function closeProfile()                { document.getElementById('profileModal').classList.remove('open'); }
+    function closeProfileOnOverlay(e)      { if (e.target === document.getElementById('profileModal')) closeProfile(); }
+
+    async function suspendWithReason(userId, reason, e) {
+      e.stopPropagation();
+      closeAllDropdowns();
+      try {
+        await db.collection('users').doc(userId).update({
+          status: 'suspended', suspendReason: reason, updatedAt: new Date().toISOString()
+        });
+        const u = allUsers.find(u => u.id === userId);
+        if (u) { u.status = 'suspended'; u.suspendReason = reason; }
+        updateStats(allUsers);
+        applyFilters();
+      } catch (err) { console.error('Suspend error:', err); }
+    }
+
+    async function activateUser(userId) {
+      try {
+        await db.collection('users').doc(userId).update({
+          status: 'active',
+          suspendReason: firebase.firestore.FieldValue.delete(),
+          updatedAt: new Date().toISOString()
+        });
+        const u = allUsers.find(u => u.id === userId);
+        if (u) { u.status = 'active'; delete u.suspendReason; }
+        updateStats(allUsers);
+        applyFilters();
+      } catch (err) { console.error('Activate error:', err); }
+    }
+
+    document.getElementById('userSearch').addEventListener('input', applyFilters);
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard Overview — GreenGrow</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Dashboard Overview</h1>
+      <p>Welcome back — here's what's happening</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate">—</div>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div class="page-body">
+
+    <!-- STAT CARDS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
+        <div class="stat-body">
+          <h3 id="stat-users">—</h3>
+          <p>Total Users</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-blue"><i data-lucide="sprout"></i></div>
+        <div class="stat-body">
+          <h3 id="stat-sellers">—</h3>
+          <p>Active Sellers</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
+        <div class="stat-body">
+          <h3 id="stat-pending">—</h3>
+          <p>Pending Apps</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-red"><i data-lucide="shopping-bag"></i></div>
+        <div class="stat-body">
+          <h3 id="stat-orders">—</h3>
+          <p>Total Orders</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART ROW -->
+    <div class="chart-row">
+      <!-- Bar Chart -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Sales & Revenue Trend</span>
+          <span class="card-badge">Revenue (₱)</span>
+        </div>
+        <div id="barChartWrap">
+          <canvas id="barChart" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- Pie Chart -->
+      <div class="card pie-card">
+        <div class="card-header">
+          <span class="card-title">User Breakdown</span>
+        </div>
+        <div class="pie-wrap">
+          <canvas id="pieChart"></canvas>
+        </div>
+        <div id="pieLegend" class="pie-legend"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="bottom-row">
+      <!-- Activity Feed -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Activity</span>
+        </div>
+        <div class="activity-list" id="recentList">
+          <p style="color:var(--text-muted);font-size:0.85rem;">Loading activity…</p>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Quick Stats</span>
+        </div>
+        <table class="quick-table">
+          <tr>
+            <td class="qt-label">Active Users</td>
+            <td class="qt-val"><span class="qt-badge qt-green" id="qs-active">—</span></td>
+          </tr>
+          <tr>
+            <td class="qt-label">Suspended Users</td>
+            <td class="qt-val"><span class="qt-badge qt-red" id="qs-suspended">—</span></td>
+          </tr>
+          <tr>
+            <td class="qt-label">Pending Applications</td>
+            <td class="qt-val"><span class="qt-badge qt-amber" id="qs-pending">—</span></td>
+          </tr>
+          <tr>
+            <td class="qt-label">Approved Sellers</td>
+            <td class="qt-val"><span class="qt-badge qt-green" id="qs-sellers">—</span></td>
+          </tr>
+          <tr>
+            <td class="qt-label">Customers</td>
+            <td class="qt-val"><span class="qt-badge qt-green" id="qs-customers">—</span></td>
+          </tr>
+          <tr>
+            <td class="qt-label">Total Orders</td>
+            <td class="qt-val"><span id="qs-orders" style="font-weight:700;color:var(--text-main)">—</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end page-body -->
+
+  <script>
+    // Date in topbar
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        loadOverview();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
+
+    async function loadOverview() {
+      try {
+        const [customersSnap, sellersSnap, ordersSnap, pendingSnap, allUsersSnap] = await Promise.all([
+          db.collection('users').where('role', '==', 'customer').get(),
+          db.collection('users').where('role', '==', 'seller').get(),
+          db.collection('orders').get(),
+          db.collection('sellerApplications').where('applicationStatus', '==', 'pending').get(),
+          db.collection('users').get()
+        ]);
+
+        const totalUsers   = customersSnap.size + sellersSnap.size;
+        const totalSellers = sellersSnap.size;
+        const pendingCount = pendingSnap.size;
+
+        // Count active/suspended
+        let activeCount = 0, suspendedCount = 0;
+        allUsersSnap.forEach(doc => {
+          const d = doc.data();
+          if (d.role === 'admin') return;
+          if (d.status === 'active')    activeCount++;
+          if (d.status === 'suspended') suspendedCount++;
+        });
+
+        // Stat cards
+        document.getElementById('stat-users').textContent   = totalUsers;
+        document.getElementById('stat-sellers').textContent = totalSellers;
+        document.getElementById('stat-orders').textContent  = ordersSnap.size;
+        document.getElementById('stat-pending').textContent = pendingCount;
+
+        // Quick stats table
+        document.getElementById('qs-active').textContent    = activeCount;
+        document.getElementById('qs-suspended').textContent = suspendedCount;
+        document.getElementById('qs-pending').textContent   = pendingCount;
+        document.getElementById('qs-sellers').textContent   = totalSellers;
+        document.getElementById('qs-customers').textContent = customersSnap.size;
+        document.getElementById('qs-orders').textContent    = ordersSnap.size;
+
+        renderPieChart(customersSnap.size, totalSellers);
+        renderBarChart();
+        loadRecentActivity();
+
+      } catch (err) {
+        console.error('Overview error:', err);
+      }
+    }
+
+    function renderPieChart(customers, sellers) {
+      const total = customers + sellers;
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      if (window.pieChartInstance) window.pieChartInstance.destroy();
+
+      window.pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Customers', 'Sellers'],
+          datasets: [{
+            data: [customers, sellers],
+            backgroundColor: ['#5aaa6e', '#1b5e20'],
+            borderColor: ['#fff', '#fff'],
+            borderWidth: 3,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        }
+      });
+
+      const cPct = total > 0 ? Math.round((customers / total) * 100) : 0;
+      const sPct = total > 0 ? Math.round((sellers   / total) * 100) : 0;
+
+      document.getElementById('pieLegend').innerHTML = `
+        <div class="legend-row">
+          <div class="legend-left">
+            <div class="legend-dot" style="background:#5aaa6e"></div>
+            Customers (${customers})
+          </div>
+          <span class="legend-pct">${cPct}%</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-left">
+            <div class="legend-dot" style="background:#1b5e20"></div>
+            Sellers (${sellers})
+          </div>
+          <span class="legend-pct">${sPct}%</span>
+        </div>`;
+    }
+
+    async function renderBarChart() {
+      try {
+        const snap = await db.collection('salesReports').orderBy('period','asc').limit(6).get();
+        const labels = [], data = [];
+        snap.forEach(doc => {
+          labels.push(doc.data().period);
+          data.push(doc.data().totalRevenue || 0);
+        });
+
+        if (!data.some(v => v > 0)) {
+          document.getElementById('barChartWrap').innerHTML = `
+            <div class="no-data">
+              <div class="no-data-icon">📈</div>
+              <p>No sales data yet. Revenue will appear once orders come in.</p>
+            </div>`;
+          return;
+        }
+
+        const ctx = document.getElementById('barChart').getContext('2d');
+        if (window.barChartInstance) window.barChartInstance.destroy();
+        window.barChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Revenue (₱)',
+              data,
+              backgroundColor: 'rgba(90,170,110,0.8)',
+              borderRadius: 7,
+              borderSkipped: false,
+              hoverBackgroundColor: '#2e7d32'
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.04)' },
+                ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Bar chart error:', err);
+      }
+    }
+
+    async function loadRecentActivity() {
+      const list = document.getElementById('recentList');
+      try {
+        const snap = await db.collection('systemLogs').orderBy('timestamp','desc').limit(5).get();
+        if (snap.empty) { await buildFallbackActivity(list); return; }
+
+        list.innerHTML = '';
+        snap.forEach(doc => {
+          const log  = doc.data();
+          const time = log.timestamp?.toDate ? timeAgo(log.timestamp.toDate()) : '—';
+          list.innerHTML += activityRow(log.details?.description || log.action, time, getDotColor(log.action));
+        });
+      } catch (err) {
+        await buildFallbackActivity(list);
+      }
+    }
+
+    async function buildFallbackActivity(list) {
+      try {
+        const [usersSnap, appsSnap] = await Promise.all([
+          db.collection('users').orderBy('createdAt','desc').limit(3).get(),
+          db.collection('sellerApplications').orderBy('createdAt','desc').limit(3).get()
+        ]);
+
+        const events = [];
+        usersSnap.forEach(doc => {
+          const d = doc.data();
+          if (d.role === 'admin') return;
+          const name = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
+          events.push({
+            text: `${name} registered as ${d.role || 'customer'}`,
+            time: d.createdAt ? timeAgo(new Date(d.createdAt)) : 'recently',
+            dot: 'dot-green'
+          });
+        });
+
+        appsSnap.forEach(doc => {
+          const d = doc.data();
+          events.push({
+            text: `New seller application — status: ${d.applicationStatus || 'pending'}`,
+            time: d.createdAt ? timeAgo(new Date(d.createdAt)) : 'recently',
+            dot: d.applicationStatus === 'approved' ? 'dot-blue'
+               : d.applicationStatus === 'rejected' ? 'dot-red'
+               : 'dot-orange'
+          });
+        });
+
+        if (!events.length) {
+          list.innerHTML = '<div class="no-activity">No activity yet.</div>';
+          return;
+        }
+
+        list.innerHTML = events.slice(0,5).map(e => activityRow(e.text, e.time, e.dot)).join('');
+      } catch {
+        list.innerHTML = '<div class="no-activity">Could not load activity.</div>';
+      }
+    }
+
+    function activityRow(text, time, dotClass) {
+      return `
+        <div class="activity-item">
+          <div class="act-dot ${dotClass}"></div>
+          <div class="act-body">
+            <div class="act-text">${text}</div>
+            <div class="act-time">${time}</div>
+          </div>
+        </div>`;
+    }
+
+    function getDotColor(action = '') {
+      const a = action.toLowerCase();
+      if (a.includes('suspend') || a.includes('reject')) return 'dot-red';
+      if (a.includes('approv') || a.includes('activ'))   return 'dot-blue';
+      if (a.includes('apply')  || a.includes('pending')) return 'dot-orange';
+      return 'dot-green';
+    }
+
+    function timeAgo(date) {
+      const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+      if (diff < 60)    return 'just now';
+      if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+      return `${Math.floor(diff/86400)}d ago`;
+    }
+
+    lucide.createIcons();
+  </script>
+
+  <style>
+    .stat-icon-wrap i svg {
+      width: 20px; height: 20px;
+      stroke: currentColor; display: block;
+    }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-amber i { color: var(--amber); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+  </style>
+</body>
+</html>

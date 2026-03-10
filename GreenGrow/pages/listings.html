@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Listing Management — GreenGrow</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { overflow-x: hidden; }
+
+    /* Lucide icons inside stat cards */
+    .stat-icon-wrap i svg {
+      width: 20px; height: 20px;
+      stroke: currentColor; display: block;
+    }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-amber i { color: var(--amber); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    /* 4-col stat row — responsive */
+    .stats-row-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px)  { .stats-row-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px)  { .stats-row-4 { grid-template-columns: 1fr; } }
+
+    /* Table column widths */
+    .admin-table { table-layout: fixed; width: 100%; min-width: 600px; }
+    .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
+    .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: auto; }
+    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 130px; }
+    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 100px; }
+    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 180px; }
+
+    /* Dropdowns stay visible */
+    .card { overflow: visible !important; }
+    .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
+    .admin-table, tbody, tr, td { overflow: visible !important; }
+
+    /* Action buttons */
+    .action-wrap { display: flex; gap: 6px; align-items: center; justify-content: center; }
+
+    .btn-approve {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 5px 12px;
+      background: rgba(46,125,50,0.09);
+      border: 1px solid rgba(46,125,50,0.25);
+      border-radius: var(--radius-sm);
+      color: var(--green-800);
+      font-size: 0.78rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    }
+    .btn-approve:hover {
+      background: var(--green-800); color: #fff;
+      box-shadow: 0 3px 10px rgba(46,125,50,0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-reject {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 5px 12px;
+      background: rgba(229,57,53,0.07);
+      border: 1px solid rgba(229,57,53,0.22);
+      border-radius: var(--radius-sm);
+      color: var(--red);
+      font-size: 0.78rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    }
+    .btn-reject:hover {
+      background: var(--red); color: #fff;
+      box-shadow: 0 3px 10px rgba(229,57,53,0.25);
+      transform: translateY(-1px);
+    }
+
+    .no-action { font-size: 0.82rem; color: #bbb; font-style: italic; }
+
+    /* Date cell */
+    .date-cell { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
+    .date-cell .time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 2px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Listing Management</h1>
+      <p>Review and manage seller applications</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate">—</div>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div class="page-body">
+
+    <!-- STAT CARDS -->
+    <div class="stats-row-4">
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-green"><i data-lucide="clipboard-list"></i></div>
+        <div class="stat-body">
+          <h3 id="statAll">—</h3>
+          <p>Total Applications</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
+        <div class="stat-body">
+          <h3 id="statPending">—</h3>
+          <p>Pending</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-blue"><i data-lucide="check-circle"></i></div>
+        <div class="stat-body">
+          <h3 id="statApproved">—</h3>
+          <p>Approved</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-red"><i data-lucide="x-circle"></i></div>
+        <div class="stat-body">
+          <h3 id="statRejected">—</h3>
+          <p>Rejected</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="card">
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <input type="text" id="appSearch" placeholder="Search by name or email…" />
+
+        <!-- Status Filter -->
+        <div class="filter-wrap" id="statusWrap">
+          <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
+            <span id="statusLabel">All Applications</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="filter-dropdown" id="statusDropdown">
+            <p>Filter by status</p>
+            <button class="filter-option selected" data-value="all"      onclick="selectFilter('all',      'All Applications', event)">All Applications</button>
+            <button class="filter-option"          data-value="pending"  onclick="selectFilter('pending',  'Pending',          event)">Pending</button>
+            <button class="filter-option"          data-value="approved" onclick="selectFilter('approved', 'Approved',         event)">Approved</button>
+            <button class="filter-option"          data-value="rejected" onclick="selectFilter('rejected', 'Rejected',         event)">Rejected</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>APPLICANT</th>
+              <th>APPLIED DATE</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="listingsTable">
+            <tr>
+              <td colspan="5" style="text-align:center; color:var(--text-muted); padding:32px;">
+                Loading applications…
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TABLE FOOTER -->
+      <div class="table-footer">
+        <span id="tableCount" class="table-count">—</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    let currentFilter = 'all';
+    let allApplications = [];
+    let unsubscribe = null;
+
+    const AVATAR_COLORS = [
+      '#2e7d32','#1565c0','#6a1b9a','#c62828',
+      '#ef6c00','#00838f','#37474f','#558b2f'
+    ];
+
+    // Date display
+    const now = new Date();
+    document.getElementById('topbarDate').textContent = now.toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    // Auth guard
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        listenApplications();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
+
+    // Real-time listener
+    function listenApplications() {
+      if (unsubscribe) unsubscribe();
+
+      unsubscribe = db.collection('sellerApplications').onSnapshot(async (snap) => {
+        const raw = [];
+        snap.forEach(doc => raw.push({ id: doc.id, ...doc.data() }));
+
+        // Deduplicate: keep only the most recent application per userId
+        const latestByUser = {};
+        raw.forEach(app => {
+          const existing = latestByUser[app.userId];
+          if (!existing) {
+            latestByUser[app.userId] = app;
+          } else {
+            const existingTime = existing.appliedAt?.toDate?.() || new Date(existing.appliedAt || 0);
+            const newTime      = app.appliedAt?.toDate?.()      || new Date(app.appliedAt || 0);
+            if (newTime > existingTime) latestByUser[app.userId] = app;
+          }
+        });
+        const deduplicated = Object.values(latestByUser);
+
+        // Enrich with user name + email
+        allApplications = await Promise.all(deduplicated.map(async (app, i) => {
+          try {
+            const userDoc  = await db.collection('users').doc(app.userId).get();
+            const userData = userDoc.exists ? userDoc.data() : null;
+            return {
+              ...app,
+              applicationStatus: (app.applicationStatus || 'pending').trim().toLowerCase(),
+              customerName:  userData?.fullName || [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || '—',
+              customerEmail: userData?.email || '—',
+              colorIndex: i
+            };
+          } catch {
+            return {
+              ...app,
+              applicationStatus: (app.applicationStatus || 'pending').trim().toLowerCase(),
+              customerName: '—', customerEmail: '—', colorIndex: i
+            };
+          }
+        }));
+
+        updateStats(allApplications);
+        applyFilters();
+      });
+    }
+
+    function updateStats(apps) {
+      const n = s => (s || 'pending').trim().toLowerCase();
+      document.getElementById('statAll').textContent      = apps.length;
+      document.getElementById('statPending').textContent  = apps.filter(a => n(a.applicationStatus) === 'pending').length;
+      document.getElementById('statApproved').textContent = apps.filter(a => n(a.applicationStatus) === 'approved').length;
+      document.getElementById('statRejected').textContent = apps.filter(a => n(a.applicationStatus) === 'rejected').length;
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('appSearch').value.toLowerCase();
+      const filtered = allApplications.filter(app => {
+        const matchStatus = currentFilter === 'all' || app.applicationStatus === currentFilter;
+        const matchSearch = app.customerName.toLowerCase().includes(q)
+                         || app.customerEmail.toLowerCase().includes(q);
+        return matchStatus && matchSearch;
+      });
+      renderTable(filtered);
+    }
+
+    function formatDate(val) {
+      if (!val) return { date: '—', time: '' };
+      let d;
+      if (val?.toDate) d = val.toDate();
+      else if (typeof val === 'string') d = new Date(val);
+      else return { date: '—', time: '' };
+      return {
+        date: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+      };
+    }
+
+    function getInitials(name) {
+      const parts = name.trim().split(' ').filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return '??';
+    }
+
+    function renderTable(apps) {
+      const tbody = document.getElementById('listingsTable');
+      const count = document.getElementById('tableCount');
+
+      if (!apps.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <i data-lucide="clipboard-x" style="width:40px;height:40px;stroke:#a5c8a5;margin-bottom:12px;"></i>
+                <p>No applications found.</p>
+              </div>
+            </td>
+          </tr>`;
+        count.textContent = 'No applications';
+        lucide.createIcons();
+        return;
+      }
+
+      tbody.innerHTML = apps.map((app, i) => {
+        const status   = app.applicationStatus || 'pending';
+        const initials = getInitials(app.customerName);
+        const color    = AVATAR_COLORS[app.colorIndex % AVATAR_COLORS.length];
+        const { date, time } = formatDate(app.appliedAt);
+
+        const badge = status === 'approved'
+          ? '<span class="badge-active">APPROVED</span>'
+          : status === 'rejected'
+          ? '<span class="badge-inactive">REJECTED</span>'
+          : '<span class="badge-pending">PENDING</span>';
+
+        const actions = status === 'pending'
+          ? `<div class="action-wrap">
+               <button class="btn-approve" onclick="updateStatus('${app.id}', '${app.userId}', 'approved')">Approve</button>
+               <button class="btn-reject"  onclick="updateStatus('${app.id}', '${app.userId}', 'rejected')">Reject</button>
+             </div>`
+          : status === 'approved'
+          ? `<div class="action-wrap">
+               <button class="btn-reject" onclick="updateStatus('${app.id}', '${app.userId}', 'rejected')">Reject</button>
+             </div>`
+          : '<span class="no-action">No actions</span>';
+
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td>
+              <div class="user-cell">
+                <div class="avatar-init" style="background:${color};">${initials}</div>
+                <div>
+                  <div class="user-name">${app.customerName}</div>
+                  <div class="user-email">${app.customerEmail}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="date-cell">
+                ${date}
+                <span class="time">${time}</span>
+              </div>
+            </td>
+            <td>${badge}</td>
+            <td>${actions}</td>
+          </tr>`;
+      }).join('');
+
+      const total = allApplications.length;
+      count.textContent = apps.length === total
+        ? `Showing all ${total} application${total !== 1 ? 's' : ''}`
+        : `Showing ${apps.length} of ${total} application${total !== 1 ? 's' : ''}`;
+    }
+
+    // Approve / Reject
+    async function updateStatus(applicationId, userId, newStatus) {
+      try {
+        await db.collection('sellerApplications').doc(applicationId).update({
+          applicationStatus: newStatus,
+          reviewedAt: new Date().toISOString()
+        });
+        await db.collection('users').doc(userId).update({
+          role: newStatus === 'approved' ? 'seller' : 'customer'
+        });
+
+        // Local update to avoid re-fetch race condition
+        const app = allApplications.find(a => a.id === applicationId);
+        if (app) app.applicationStatus = newStatus;
+        updateStats(allApplications);
+        applyFilters();
+      } catch (err) {
+        console.error('Update status error:', err);
+      }
+    }
+
+    // Filter dropdown
+    function toggleFilterDropdown(wrapperId, e) {
+      e.stopPropagation();
+      const wrap = document.getElementById(wrapperId);
+      const isOpen = wrap.classList.contains('open');
+      document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
+      if (!isOpen) wrap.classList.add('open');
+    }
+
+    function selectFilter(value, label, e) {
+      e.stopPropagation();
+      currentFilter = value;
+      document.getElementById('statusLabel').textContent = label;
+      document.querySelectorAll('#statusDropdown .filter-option').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.value === value);
+      });
+      document.getElementById('statusWrap').classList.remove('open');
+      applyFilters();
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
+    });
+
+    document.getElementById('appSearch').addEventListener('input', applyFilters);
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
