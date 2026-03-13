@@ -71,7 +71,7 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title">Sales & Revenue Trend</span>
-          <span class="card-badge">Revenue (₱)</span>
+          <span class="card-badge">Last 7 Days</span>
         </div>
         <div id="barChartWrap">
           <canvas id="barChart" height="130"></canvas>
@@ -139,7 +139,6 @@
   </div><!-- end page-body -->
 
   <script>
-    // Date in topbar
     document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
     });
@@ -157,6 +156,8 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
+    const unsubs = [];
+
     auth.onAuthStateChanged(async (user) => {
       if (!user) { window.parent.location.href = 'index.html'; return; }
       try {
@@ -166,57 +167,69 @@
           window.parent.location.href = 'index.html';
           return;
         }
-        loadOverview();
+        startListeners();
       } catch (err) {
         console.error('Auth error:', err);
         window.parent.location.href = 'index.html';
       }
     });
 
-    async function loadOverview() {
-      try {
-        const [customersSnap, sellersSnap, ordersSnap, pendingSnap, allUsersSnap] = await Promise.all([
-          db.collection('users').where('role', '==', 'customer').get(),
-          db.collection('users').where('role', '==', 'seller').get(),
-          db.collection('orders').get(),
-          db.collection('sellerApplications').where('applicationStatus', '==', 'pending').get(),
-          db.collection('users').get()
-        ]);
+    function startListeners() {
 
-        const totalUsers   = customersSnap.size + sellersSnap.size;
-        const totalSellers = sellersSnap.size;
-        const pendingCount = pendingSnap.size;
+      // --- USERS listener: single source of truth for all user-related stats ---
+      unsubs.push(
+        db.collection('users').onSnapshot(snap => {
+          let customers = 0, sellers = 0, active = 0, suspended = 0;
 
-        // Count active/suspended
-        let activeCount = 0, suspendedCount = 0;
-        allUsersSnap.forEach(doc => {
-          const d = doc.data();
-          if (d.role === 'admin') return;
-          if (d.status === 'active')    activeCount++;
-          if (d.status === 'suspended') suspendedCount++;
-        });
+          snap.forEach(doc => {
+            const d = doc.data();
+            if (d.role === 'admin') return; // exclude admins from all counts
+            if (d.role === 'customer') customers++;
+            if (d.role === 'seller')   sellers++;
+            if (d.status === 'active')    active++;
+            if (d.status === 'suspended') suspended++;
+          });
 
-        // Stat cards
-        document.getElementById('stat-users').textContent   = totalUsers;
-        document.getElementById('stat-sellers').textContent = totalSellers;
-        document.getElementById('stat-orders').textContent  = ordersSnap.size;
-        document.getElementById('stat-pending').textContent = pendingCount;
+          const total = customers + sellers;
 
-        // Quick stats table
-        document.getElementById('qs-active').textContent    = activeCount;
-        document.getElementById('qs-suspended').textContent = suspendedCount;
-        document.getElementById('qs-pending').textContent   = pendingCount;
-        document.getElementById('qs-sellers').textContent   = totalSellers;
-        document.getElementById('qs-customers').textContent = customersSnap.size;
-        document.getElementById('qs-orders').textContent    = ordersSnap.size;
+          // Stat cards
+          document.getElementById('stat-users').textContent   = total;
+          document.getElementById('stat-sellers').textContent = sellers;
 
-        renderPieChart(customersSnap.size, totalSellers);
-        renderBarChart();
-        loadRecentActivity();
+          // Quick stats
+          document.getElementById('qs-active').textContent    = active;
+          document.getElementById('qs-suspended').textContent = suspended;
+          document.getElementById('qs-sellers').textContent   = sellers;
+          document.getElementById('qs-customers').textContent = customers;
 
-      } catch (err) {
-        console.error('Overview error:', err);
-      }
+          // Pie chart
+          renderPieChart(customers, sellers);
+
+          // Refresh activity feed
+          loadRecentActivity();
+        })
+      );
+
+      // --- PENDING APPLICATIONS listener ---
+      unsubs.push(
+        db.collection('sellerApplications')
+          .where('applicationStatus', '==', 'pending')
+          .onSnapshot(snap => {
+            document.getElementById('stat-pending').textContent = snap.size;
+            document.getElementById('qs-pending').textContent   = snap.size;
+          })
+      );
+
+      // --- ORDERS listener: only delivered orders ---
+      unsubs.push(
+        db.collection('orders')
+          .where('status', '==', 'delivered')
+          .onSnapshot(snap => {
+            document.getElementById('stat-orders').textContent = snap.size;
+            document.getElementById('qs-orders').textContent   = snap.size;
+            renderBarChart(snap.docs);
+          })
+      );
     }
 
     function renderPieChart(customers, sellers) {
@@ -238,6 +251,8 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 1,
           plugins: { legend: { display: false }, tooltip: { enabled: true } }
         }
       });
@@ -262,73 +277,147 @@
         </div>`;
     }
 
-    async function renderBarChart() {
-      try {
-        const snap = await db.collection('salesReports').orderBy('period','asc').limit(6).get();
-        const labels = [], data = [];
-        snap.forEach(doc => {
-          labels.push(doc.data().period);
-          data.push(doc.data().totalRevenue || 0);
+    function renderBarChart(orderDocs) {
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push({
+          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          dateStr: d.toISOString().split('T')[0],
+          revenue: 0,
+          orders: 0
         });
+      }
 
-        if (!data.some(v => v > 0)) {
-          document.getElementById('barChartWrap').innerHTML = `
-            <div class="no-data">
-              <div class="no-data-icon">📈</div>
-              <p>No sales data yet. Revenue will appear once orders come in.</p>
-            </div>`;
-          return;
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      orderDocs.forEach(doc => {
+        const data = doc.data();
+        const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+        if (orderDate < sevenDaysAgo) return;
+        const dateStr = orderDate.toISOString().split('T')[0];
+        const day = days.find(d => d.dateStr === dateStr);
+        if (day) {
+          day.revenue += data.total || 0;
+          day.orders++;
         }
+      });
 
-        const ctx = document.getElementById('barChart').getContext('2d');
-        if (window.barChartInstance) window.barChartInstance.destroy();
-        window.barChartInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
+      const labels  = days.map(d => d.label);
+      const revenue = days.map(d => d.revenue);
+      const orders  = days.map(d => d.orders);
+      const hasData = revenue.some(v => v > 0);
+
+      if (!hasData) {
+        document.getElementById('barChartWrap').innerHTML = `
+          <div class="no-data">
+            <div class="no-data-icon">📈</div>
+            <p>No sales data yet. Revenue will appear once orders come in.</p>
+          </div>`;
+        return;
+      }
+
+      if (!document.getElementById('barChart')) {
+        document.getElementById('barChartWrap').innerHTML = `<canvas id="barChart" height="130"></canvas>`;
+      }
+
+      const ctx = document.getElementById('barChart').getContext('2d');
+      if (window.barChartInstance) window.barChartInstance.destroy();
+
+      window.barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
               label: 'Revenue (₱)',
-              data,
-              backgroundColor: 'rgba(90,170,110,0.8)',
+              data: revenue,
+              backgroundColor: 'rgba(90,170,110,0.85)',
               borderRadius: 7,
               borderSkipped: false,
-              hoverBackgroundColor: '#2e7d32'
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.04)' },
-                ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
-              },
-              x: {
-                grid: { display: false },
-                ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
+              hoverBackgroundColor: '#2e7d32',
+              yAxisID: 'yRevenue'
+            },
+            {
+              label: 'Orders',
+              data: orders,
+              backgroundColor: 'rgba(245,158,11,0.80)',
+              borderRadius: 7,
+              borderSkipped: false,
+              hoverBackgroundColor: '#d97706',
+              yAxisID: 'yOrders'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#7a9b7e',
+                font: { family: 'DM Sans', size: 11 },
+                boxWidth: 12,
+                padding: 16
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  if (ctx.dataset.label === 'Revenue (₱)') return `  ₱${ctx.parsed.y.toLocaleString()}`;
+                  return `  ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? 's' : ''}`;
+                }
               }
             }
+          },
+          scales: {
+            yRevenue: {
+              beginAtZero: true,
+              position: 'left',
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: {
+                color: '#7a9b7e',
+                font: { family: 'DM Sans', size: 11 },
+                callback: v => '₱' + v.toLocaleString()
+              }
+            },
+            yOrders: {
+              beginAtZero: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#f59e0b',
+                font: { family: 'DM Sans', size: 11 },
+                stepSize: 1,
+                precision: 0
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
+            }
           }
-        });
-      } catch (err) {
-        console.error('Bar chart error:', err);
-      }
+        }
+      });
     }
 
     async function loadRecentActivity() {
       const list = document.getElementById('recentList');
       try {
-        const snap = await db.collection('systemLogs').orderBy('timestamp','desc').limit(5).get();
+        const snap = await db.collection('systemLogs').orderBy('timestamp', 'desc').limit(5).get();
         if (snap.empty) { await buildFallbackActivity(list); return; }
-
         list.innerHTML = '';
         snap.forEach(doc => {
           const log  = doc.data();
-          const time = log.timestamp?.toDate ? timeAgo(log.timestamp.toDate()) : '—';
+          const time = log.timestamp?.toDate ? formatDate(log.timestamp.toDate()) : '—';
           list.innerHTML += activityRow(log.details?.description || log.action, time, getDotColor(log.action));
         });
-      } catch (err) {
+      } catch {
         await buildFallbackActivity(list);
       }
     }
@@ -336,39 +425,43 @@
     async function buildFallbackActivity(list) {
       try {
         const [usersSnap, appsSnap] = await Promise.all([
-          db.collection('users').orderBy('createdAt','desc').limit(3).get(),
-          db.collection('sellerApplications').orderBy('createdAt','desc').limit(3).get()
+          db.collection('users').orderBy('createdAt', 'desc').limit(3).get(),
+          db.collection('sellerApplications').orderBy('createdAt', 'desc').limit(3).get()
         ]);
 
         const events = [];
+
         usersSnap.forEach(doc => {
           const d = doc.data();
           if (d.role === 'admin') return;
-          const name = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
+          const name    = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
+          const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
           events.push({
-            text: `${name} registered as ${d.role || 'customer'}`,
-            time: d.createdAt ? timeAgo(new Date(d.createdAt)) : 'recently',
-            dot: 'dot-green'
+            text: d.role === 'seller'
+              ? `${name} became a seller`
+              : `${name} registered as customer`,
+            time: rawDate ? formatDate(rawDate) : 'recently',
+            dot: d.role === 'seller' ? 'dot-blue' : 'dot-green',
+            ts: rawDate ? rawDate.getTime() : 0
           });
         });
 
         appsSnap.forEach(doc => {
           const d = doc.data();
+          const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
           events.push({
             text: `New seller application — status: ${d.applicationStatus || 'pending'}`,
-            time: d.createdAt ? timeAgo(new Date(d.createdAt)) : 'recently',
+            time: rawDate ? formatDate(rawDate) : 'recently',
             dot: d.applicationStatus === 'approved' ? 'dot-blue'
-               : d.applicationStatus === 'rejected' ? 'dot-red'
-               : 'dot-orange'
+               : d.applicationStatus === 'rejected' ? 'dot-red' : 'dot-orange',
+            ts: rawDate ? rawDate.getTime() : 0
           });
         });
 
-        if (!events.length) {
-          list.innerHTML = '<div class="no-activity">No activity yet.</div>';
-          return;
-        }
+        if (!events.length) { list.innerHTML = '<div class="no-activity">No activity yet.</div>'; return; }
 
-        list.innerHTML = events.slice(0,5).map(e => activityRow(e.text, e.time, e.dot)).join('');
+        events.sort((a, b) => b.ts - a.ts);
+        list.innerHTML = events.slice(0, 5).map(e => activityRow(e.text, e.time, e.dot)).join('');
       } catch {
         list.innerHTML = '<div class="no-activity">Could not load activity.</div>';
       }
@@ -393,12 +486,10 @@
       return 'dot-green';
     }
 
-    function timeAgo(date) {
-      const diff = Math.floor((Date.now() - new Date(date)) / 1000);
-      if (diff < 60)    return 'just now';
-      if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
-      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-      return `${Math.floor(diff/86400)}d ago`;
+    function formatDate(date) {
+      return new Date(date).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric'
+      });
     }
 
     lucide.createIcons();
@@ -413,6 +504,25 @@
     .stat-icon-wrap.si-blue  i { color: var(--blue); }
     .stat-icon-wrap.si-amber i { color: var(--amber); }
     .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    /* Pie card — fill full card height, bigger chart */
+    .pie-card {
+      display: flex;
+      flex-direction: column;
+    }
+    .pie-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 0;
+      width: 100%;
+      height: 260px;
+    }
+    .pie-legend {
+      margin-top: auto;
+      padding-top: 16px;
+    }
   </style>
 </body>
 </html>

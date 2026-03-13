@@ -18,7 +18,6 @@
   <style>
     body { overflow-x: hidden; }
 
-    /* Lucide icons inside stat cards */
     .stat-icon-wrap i svg {
       width: 20px; height: 20px;
       stroke: currentColor; display: block;
@@ -28,7 +27,6 @@
     .stat-icon-wrap.si-amber i { color: var(--amber); }
     .stat-icon-wrap.si-red   i { color: var(--red); }
 
-    /* 4-col stat row — responsive */
     .stats-row-4 {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -40,7 +38,6 @@
     @media (max-width: 900px)  { .stats-row-4 { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 500px)  { .stats-row-4 { grid-template-columns: 1fr; } }
 
-    /* Table column widths */
     .admin-table { table-layout: fixed; width: 100%; min-width: 600px; }
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
     .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: auto; }
@@ -48,12 +45,10 @@
     .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 130px; }
     .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 220px; }
 
-    /* Dropdowns stay visible */
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
 
-    /* Action buttons */
     .action-wrap { display: flex; gap: 6px; align-items: center; justify-content: center; }
 
     .btn-approve {
@@ -94,7 +89,6 @@
 
     .no-action { font-size: 0.82rem; color: #bbb; font-style: italic; }
 
-    /* Date cell */
     .date-cell { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
     .date-cell .time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 2px; }
   </style>
@@ -155,7 +149,6 @@
       <div class="toolbar">
         <input type="text" id="appSearch" placeholder="Search by name or email…" />
 
-        <!-- Status Filter -->
         <div class="filter-wrap" id="statusWrap">
           <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
             <span id="statusLabel">All Applications</span>
@@ -224,13 +217,10 @@
       '#ef6c00','#00838f','#37474f','#558b2f'
     ];
 
-    // Date display
-    const now = new Date();
-    document.getElementById('topbarDate').textContent = now.toLocaleDateString('en-US', {
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
     });
 
-    // Auth guard
     auth.onAuthStateChanged(async (user) => {
       if (!user) { window.parent.location.href = 'index.html'; return; }
       try {
@@ -247,7 +237,6 @@
       }
     });
 
-    // Real-time listener
     function listenApplications() {
       if (unsubscribe) unsubscribe();
 
@@ -364,14 +353,11 @@
           ? '<span class="badge-inactive">REJECTED</span>'
           : '<span class="badge-pending">PENDING</span>';
 
+        // ✅ approved = no actions, pending = approve + reject, rejected = no actions
         const actions = status === 'pending'
           ? `<div class="action-wrap">
                <button class="btn-approve" onclick="updateStatus('${app.id}', '${app.userId}', 'approved')">Approve</button>
                <button class="btn-reject"  onclick="updateStatus('${app.id}', '${app.userId}', 'rejected')">Reject</button>
-             </div>`
-          : status === 'approved'
-          ? `<div class="action-wrap">
-               <button class="btn-reject" onclick="updateStatus('${app.id}', '${app.userId}', 'rejected')">Reject</button>
              </div>`
           : '<span class="no-action">No actions</span>';
 
@@ -404,7 +390,6 @@
         : `Showing ${apps.length} of ${total} application${total !== 1 ? 's' : ''}`;
     }
 
-    // Approve / Reject
     async function updateStatus(applicationId, userId, newStatus) {
       try {
         await db.collection('sellerApplications').doc(applicationId).update({
@@ -415,7 +400,6 @@
           role: newStatus === 'approved' ? 'seller' : 'customer'
         });
 
-        // Local update to avoid re-fetch race condition
         const app = allApplications.find(a => a.id === applicationId);
         if (app) app.applicationStatus = newStatus;
         updateStats(allApplications);
@@ -425,7 +409,6 @@
       }
     }
 
-    // Filter dropdown
     function toggleFilterDropdown(wrapperId, e) {
       e.stopPropagation();
       const wrap = document.getElementById(wrapperId);

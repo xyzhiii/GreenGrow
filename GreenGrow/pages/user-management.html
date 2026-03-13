@@ -19,7 +19,6 @@
   <style>
     body { overflow-x: hidden; }
 
-    /* Lucide icons inside stat cards */
     .stat-icon-wrap i svg {
       width: 20px;
       height: 20px;
@@ -30,7 +29,6 @@
     .stat-icon-wrap.si-blue  i { color: var(--blue); }
     .stat-icon-wrap.si-red   i { color: var(--red); }
 
-    /* 3-col stat row — responsive */
     .stats-row-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -39,19 +37,11 @@
       width: 100%;
       box-sizing: border-box;
     }
+    @media (max-width: 700px) { .stats-row-3 { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) and (min-width: 701px) { .stats-row-3 { grid-template-columns: repeat(2, 1fr); } }
 
-    @media (max-width: 700px) {
-      .stats-row-3 { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 900px) and (min-width: 701px) {
-      .stats-row-3 { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* Stat cards never squish below a readable size */
     .stat-card { min-width: 0; }
 
-    /* Table column widths */
     .admin-table { table-layout: fixed; width: 100%; min-width: 680px; }
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
     .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 180px; }
@@ -60,16 +50,10 @@
     .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 130px; }
     .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 180px; }
 
-    /* Keep dropdowns visible */
     .card { overflow: visible !important; }
-    .table-wrap {
-      overflow-x: auto !important;
-      overflow-y: visible !important;
-      width: 100%;
-    }
+    .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
 
-    /* Tighter action buttons to prevent overflow */
     .actions-cell { gap: 5px; }
     .actions-cell .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
   </style>
@@ -228,6 +212,13 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
+    const SUSPEND_REASONS = ['Violation of Terms', 'Suspicious Activity', 'Fraud', 'Spam'];
+    const AVATAR_COLORS   = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+
+    let allUsers = [];
+    let activeFilters = { role: 'all', status: 'all' };
+    let unsubUsers = null;
+
     auth.onAuthStateChanged(async (user) => {
       if (!user) { window.parent.location.href = 'index.html'; return; }
       try {
@@ -237,22 +228,17 @@
           window.parent.location.href = 'index.html';
           return;
         }
-        loadUsers();
+        startUsersListener();
       } catch (err) {
         console.error('Auth error:', err);
         window.parent.location.href = 'index.html';
       }
     });
 
-    const SUSPEND_REASONS = ['Violation of Terms', 'Suspicious Activity', 'Fraud', 'Spam'];
-    const AVATAR_COLORS   = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+    function startUsersListener() {
+      if (unsubUsers) unsubUsers();
 
-    let allUsers = [];
-    let activeFilters = { role: 'all', status: 'all' };
-
-    async function loadUsers() {
-      try {
-        const snap = await db.collection('users').get();
+      unsubUsers = db.collection('users').onSnapshot(snap => {
         allUsers = [];
         snap.forEach(doc => {
           const data = doc.data();
@@ -261,7 +247,9 @@
         });
         updateStats(allUsers);
         applyFilters();
-      } catch (err) { console.error('Load users error:', err); }
+      }, err => {
+        console.error('Users listener error:', err);
+      });
     }
 
     function updateStats(users) {
@@ -320,7 +308,7 @@
         const btn  = e.currentTarget;
         const rect = btn.getBoundingClientRect();
         dropdown.style.top  = (rect.bottom + 4) + 'px';
-        dropdown.style.left = (rect.right - 210) + 'px';  // align right edge to button
+        dropdown.style.left = (rect.right - 210) + 'px';
         dropdown.classList.add('open');
       }
     }
@@ -336,7 +324,7 @@
       const f = (u.firstName || '').trim();
       const l = (u.lastName  || '').trim();
       if (f && l) return (f[0] + l[0]).toUpperCase();
-      if (f)      return f.slice(0,2).toUpperCase();
+      if (f)      return f.slice(0, 2).toUpperCase();
       return '??';
     }
 
@@ -355,9 +343,9 @@
       }
 
       tbody.innerHTML = users.map((u, i) => {
-        const fullName   = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
-        const initials   = getInitials(u);
-        const color      = AVATAR_COLORS[i % AVATAR_COLORS.length];
+        const fullName  = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
+        const initials  = getInitials(u);
+        const color     = AVATAR_COLORS[i % AVATAR_COLORS.length];
 
         const statusBadge = u.status === 'active'
           ? '<span class="badge-active">Active</span>'
@@ -436,7 +424,7 @@
     }
 
     function openProfile(userId) {
-      const u     = allUsers.find(u => u.id === userId);
+      const u = allUsers.find(u => u.id === userId);
       if (!u) return;
       const color = AVATAR_COLORS[allUsers.indexOf(u) % AVATAR_COLORS.length];
 
@@ -461,8 +449,8 @@
       document.getElementById('profileModal').classList.add('open');
     }
 
-    function closeProfile()                { document.getElementById('profileModal').classList.remove('open'); }
-    function closeProfileOnOverlay(e)      { if (e.target === document.getElementById('profileModal')) closeProfile(); }
+    function closeProfile()           { document.getElementById('profileModal').classList.remove('open'); }
+    function closeProfileOnOverlay(e) { if (e.target === document.getElementById('profileModal')) closeProfile(); }
 
     async function suspendWithReason(userId, reason, e) {
       e.stopPropagation();
@@ -471,10 +459,7 @@
         await db.collection('users').doc(userId).update({
           status: 'suspended', suspendReason: reason, updatedAt: new Date().toISOString()
         });
-        const u = allUsers.find(u => u.id === userId);
-        if (u) { u.status = 'suspended'; u.suspendReason = reason; }
-        updateStats(allUsers);
-        applyFilters();
+        // onSnapshot will automatically update allUsers and re-render
       } catch (err) { console.error('Suspend error:', err); }
     }
 
@@ -485,10 +470,7 @@
           suspendReason: firebase.firestore.FieldValue.delete(),
           updatedAt: new Date().toISOString()
         });
-        const u = allUsers.find(u => u.id === userId);
-        if (u) { u.status = 'active'; delete u.suspendReason; }
-        updateStats(allUsers);
-        applyFilters();
+        // onSnapshot will automatically update allUsers and re-render
       } catch (err) { console.error('Activate error:', err); }
     }
 
