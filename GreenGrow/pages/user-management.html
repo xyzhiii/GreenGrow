@@ -219,6 +219,18 @@
     let activeFilters = { role: 'all', status: 'all' };
     let unsubUsers = null;
 
+    // ✅ FIXED: handles Firestore Timestamp, ISO string, and plain Date
+    function formatDate(val) {
+      if (!val) return '—';
+      let d;
+      if (val?.toDate)               d = val.toDate();        // Firestore Timestamp
+      else if (typeof val === 'string') d = new Date(val);    // ISO string
+      else if (val instanceof Date)   d = val;                 // already a Date
+      else return '—';
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
     auth.onAuthStateChanged(async (user) => {
       if (!user) { window.parent.location.href = 'index.html'; return; }
       try {
@@ -259,13 +271,21 @@
     }
 
     function applyFilters() {
-      const q      = document.getElementById('userSearch').value.toLowerCase();
+      const q      = document.getElementById('userSearch').value.toLowerCase().trim();
       const role   = activeFilters.role;
       const status = activeFilters.status;
 
       const filtered = allUsers.filter(u => {
-        const fullName = ((u.firstName || '') + ' ' + (u.lastName || '')).toLowerCase();
-        return fullName.includes(q)
+        const firstName = (u.firstName || '').toLowerCase();
+        const lastName  = (u.lastName  || '').toLowerCase();
+        const fullName  = (firstName + ' ' + lastName).trim();
+
+        const nameMatch = !q
+          || firstName.startsWith(q)
+          || lastName.startsWith(q)
+          || fullName.startsWith(q);
+
+        return nameMatch
           && (role   === 'all' || u.role   === role)
           && (status === 'all' || u.status === status);
       });
@@ -403,8 +423,8 @@
         'Role':           u.role          || '—',
         'Status':         u.status        || '—',
         'Suspend Reason': u.suspendReason || '—',
-        'Date Joined':    u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '—',
-        'Last Updated':   u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '—',
+        'Date Joined':    formatDate(u.createdAt),
+        'Last Updated':   formatDate(u.updatedAt),
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
@@ -438,8 +458,8 @@
         { label: 'Phone',          value: u.phone  || '—' },
         { label: 'Status',         value: u.status === 'active' ? 'Active' : u.status === 'suspended' ? 'Suspended' : 'Pending' },
         { label: 'Suspend Reason', value: u.suspendReason || '—' },
-        { label: 'Joined',         value: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—' },
-        { label: 'Last Updated',   value: u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—' },
+        { label: 'Joined',         value: formatDate(u.createdAt) },   // ✅ FIXED
+        { label: 'Last Updated',   value: formatDate(u.updatedAt) },   // ✅ FIXED
       ].map(f => `
         <div class="profile-field">
           <span class="profile-field-label">${f.label}</span>
@@ -459,7 +479,6 @@
         await db.collection('users').doc(userId).update({
           status: 'suspended', suspendReason: reason, updatedAt: new Date().toISOString()
         });
-        // onSnapshot will automatically update allUsers and re-render
       } catch (err) { console.error('Suspend error:', err); }
     }
 
@@ -470,7 +489,6 @@
           suspendReason: firebase.firestore.FieldValue.delete(),
           updatedAt: new Date().toISOString()
         });
-        // onSnapshot will automatically update allUsers and re-render
       } catch (err) { console.error('Activate error:', err); }
     }
 

@@ -45,7 +45,11 @@
         <a class="nav-link" data-page="listings.html" href="#">
           <i data-lucide="sprout" class="nav-icon"></i> Listing Management
         </a>
+
         <div class="nav-section-label">Reports</div>
+        <a class="nav-link" data-page="appeals.html" href="#">
+          <i data-lucide="shield-alert" class="nav-icon"></i> Account Appeals
+        </a>
         <a class="nav-link" data-page="analytics.html" href="#">
           <i data-lucide="bar-chart-2" class="nav-icon"></i> Analytics & Reports
         </a>
@@ -93,7 +97,6 @@
         if (!userDoc.exists) { await auth.signOut(); window.location.href = 'index.html'; return; }
         const userData = userDoc.data();
         if (userData.role !== 'admin') { await auth.signOut(); window.location.href = 'index.html'; return; }
-        // admin info strip removed from sidebar
       } catch (err) {
         console.error('Auth error:', err);
         window.location.href = 'index.html';
@@ -131,7 +134,6 @@
       window.location.href = 'index.html';
     });
 
-    // Initialize Lucide icons
     lucide.createIcons();
   </script>
 </body>

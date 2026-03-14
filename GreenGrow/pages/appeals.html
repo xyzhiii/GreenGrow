@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Account Appeals — GreenGrow</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { overflow-x: hidden; }
+
+    .stat-icon-wrap i svg {
+      width: 20px; height: 20px;
+      stroke: currentColor; display: block;
+    }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-amber i { color: var(--amber); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    .stats-row-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) { .stats-row-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-row-4 { grid-template-columns: 1fr; } }
+
+    /* Table column widths */
+    .admin-table { table-layout: fixed; width: 100%; min-width: 680px; }
+    .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
+    .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 180px; }
+    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 110px; }
+    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: auto; }
+    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 120px; }
+    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 110px; }
+    .admin-table th:nth-child(7), .admin-table td:nth-child(7) { width: 200px; }
+
+    .card { overflow: visible !important; }
+    .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
+    .admin-table, tbody, tr, td { overflow: visible !important; }
+
+    /* Appeal message cell */
+    .appeal-message {
+      font-size: 0.84rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Action buttons */
+    .action-wrap { display: flex; gap: 6px; align-items: center; justify-content: center; }
+
+    .btn-approve {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 5px 12px;
+      background: rgba(46,125,50,0.09);
+      border: 1px solid rgba(46,125,50,0.25);
+      border-radius: var(--radius-sm);
+      color: var(--green-800);
+      font-size: 0.78rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    }
+    .btn-approve:hover {
+      background: var(--green-800); color: #fff;
+      box-shadow: 0 3px 10px rgba(46,125,50,0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-deny {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 5px 12px;
+      background: rgba(229,57,53,0.07);
+      border: 1px solid rgba(229,57,53,0.22);
+      border-radius: var(--radius-sm);
+      color: var(--red);
+      font-size: 0.78rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    }
+    .btn-deny:hover {
+      background: var(--red); color: #fff;
+      box-shadow: 0 3px 10px rgba(229,57,53,0.25);
+      transform: translateY(-1px);
+    }
+
+    .no-action { font-size: 0.82rem; color: #bbb; font-style: italic; }
+
+    .date-cell { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
+    .date-cell .time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 2px; }
+
+    /* View message modal */
+    .appeal-modal {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 28px 60px rgba(0,0,0,0.16);
+      width: 100%;
+      max-width: 480px;
+      margin: 20px;
+      overflow: hidden;
+      animation: slideUp 0.25s var(--ease);
+    }
+
+    .appeal-modal-header {
+      background: linear-gradient(135deg, var(--green-800), var(--green-900));
+      padding: 22px 26px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+    }
+
+    .appeal-modal-header .modal-icon {
+      width: 44px; height: 44px;
+      border-radius: 11px;
+      background: rgba(255,255,255,0.18);
+      border: 2px solid rgba(255,255,255,0.28);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.2rem;
+    }
+
+    .appeal-modal-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      color: #fff;
+    }
+
+    .appeal-modal-sub {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.68);
+      margin-top: 3px;
+    }
+
+    .appeal-modal-body { padding: 22px 26px 26px; }
+
+    .appeal-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    .appeal-detail-row:last-child { border-bottom: none; }
+
+    .appeal-detail-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .appeal-detail-value {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-main);
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    .appeal-message-full {
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      line-height: 1.7;
+      background: var(--green-50);
+      border: 1px solid rgba(46,125,50,0.10);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-top: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .appeal-message-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+
+    .modal-footer-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* Suspend reason badge inside table */
+    .suspend-reason-badge {
+      display: inline-block;
+      font-size: 0.74rem;
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(229,57,53,0.18);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .user-email {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOAST -->
+  <div class="toast" id="mainToast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Done!</span>
+  </div>
+
+  <!-- APPEAL DETAIL MODAL -->
+  <div class="modal-overlay" id="appealModal" onclick="closeModalOnOverlay(event)">
+    <div class="appeal-modal">
+      <div class="appeal-modal-header">
+        <div class="modal-icon">📋</div>
+        <div>
+          <div class="appeal-modal-title" id="modalUserName">—</div>
+          <div class="appeal-modal-sub" id="modalUserEmail">—</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="appeal-modal-body">
+        <div class="appeal-detail-row">
+          <span class="appeal-detail-label">Suspend Reason</span>
+          <span class="appeal-detail-value" id="modalSuspendReason">—</span>
+        </div>
+        <div class="appeal-detail-row">
+          <span class="appeal-detail-label">Submitted</span>
+          <span class="appeal-detail-value" id="modalSubmittedAt">—</span>
+        </div>
+        <div class="appeal-detail-row">
+          <span class="appeal-detail-label">Status</span>
+          <span class="appeal-detail-value" id="modalStatus">—</span>
+        </div>
+        <div class="appeal-message-label">Appeal Message</div>
+        <div class="appeal-message-full" id="modalMessage">—</div>
+        <div class="modal-footer-btns" id="modalActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Account Appeals</h1>
+      <p>Review suspension appeals from users</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate">—</div>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div class="page-body">
+
+    <!-- STAT CARDS -->
+    <div class="stats-row-4">
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-green"><i data-lucide="inbox"></i></div>
+        <div class="stat-body">
+          <h3 id="statTotal">—</h3>
+          <p>Total Appeals</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
+        <div class="stat-body">
+          <h3 id="statPending">—</h3>
+          <p>Pending</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-blue"><i data-lucide="check-circle"></i></div>
+        <div class="stat-body">
+          <h3 id="statApproved">—</h3>
+          <p>Approved</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-red"><i data-lucide="x-circle"></i></div>
+        <div class="stat-body">
+          <h3 id="statDenied">—</h3>
+          <p>Denied</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="card">
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <input type="text" id="appealSearch" placeholder="Search by name or email…" />
+
+        <div class="filter-wrap" id="statusWrap">
+          <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
+            <span id="statusLabel">All Appeals</span>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="filter-dropdown" id="statusDropdown">
+            <p>Filter by status</p>
+            <button class="filter-option selected" data-value="all"      onclick="selectFilter('all',      'All Appeals', event)">All Appeals</button>
+            <button class="filter-option"          data-value="pending"  onclick="selectFilter('pending',  'Pending',     event)">Pending</button>
+            <button class="filter-option"          data-value="approved" onclick="selectFilter('approved', 'Approved',    event)">Approved</button>
+            <button class="filter-option"          data-value="denied"   onclick="selectFilter('denied',   'Denied',      event)">Denied</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>User</th>
+              <th>Suspend Reason</th>
+              <th>Appeal Message</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="appealsTable">
+            <tr>
+              <td colspan="7" style="text-align:center; padding:28px; color:var(--text-muted);">
+                Loading appeals…
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TABLE FOOTER -->
+      <div class="table-footer">
+        <span class="table-footer-count" id="footerCount">Loading…</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    const AVATAR_COLORS = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+
+    let allAppeals    = [];
+    let currentFilter = 'all';
+    let currentModalId = null;
+    let unsubAppeals  = null;
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        startAppealsListener();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
+
+    function startAppealsListener() {
+      if (unsubAppeals) unsubAppeals();
+
+      unsubAppeals = db.collection('appeals')
+        .orderBy('submittedAt', 'desc')
+        .onSnapshot(async (snap) => {
+          const raw = [];
+          snap.forEach(doc => raw.push({ id: doc.id, ...doc.data() }));
+
+          // Enrich with user data
+          allAppeals = await Promise.all(raw.map(async (appeal, i) => {
+            try {
+              const userDoc  = await db.collection('users').doc(appeal.userId).get();
+              const userData = userDoc.exists ? userDoc.data() : null;
+              return {
+                ...appeal,
+                status: (appeal.status || 'pending').toLowerCase(),
+                userName:  [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || '—',
+                userEmail: userData?.email || '—',
+                suspendReason: userData?.suspendReason || appeal.suspendReason || '—',
+                colorIndex: i
+              };
+            } catch {
+              return {
+                ...appeal,
+                status: (appeal.status || 'pending').toLowerCase(),
+                userName: '—', userEmail: '—',
+                suspendReason: appeal.suspendReason || '—',
+                colorIndex: i
+              };
+            }
+          }));
+
+          updateStats(allAppeals);
+          applyFilters();
+        }, err => console.error('Appeals listener error:', err));
+    }
+
+    function updateStats(appeals) {
+      document.getElementById('statTotal').textContent    = appeals.length;
+      document.getElementById('statPending').textContent  = appeals.filter(a => a.status === 'pending').length;
+      document.getElementById('statApproved').textContent = appeals.filter(a => a.status === 'approved').length;
+      document.getElementById('statDenied').textContent   = appeals.filter(a => a.status === 'denied').length;
+    }
+
+    function applyFilters() {
+      const q = document.getElementById('appealSearch').value.toLowerCase().trim();
+
+      const filtered = allAppeals.filter(a => {
+        const nameParts = a.userName.toLowerCase().split(' ').filter(Boolean);
+        const fullName  = a.userName.toLowerCase();
+        const email     = a.userEmail.toLowerCase();
+
+        const matchSearch = !q
+          || nameParts.some(p => p.startsWith(q))
+          || fullName.startsWith(q)
+          || email.startsWith(q);
+
+        const matchStatus = currentFilter === 'all' || a.status === currentFilter;
+        return matchSearch && matchStatus;
+      });
+
+      renderTable(filtered);
+
+      const count = filtered.length;
+      document.getElementById('footerCount').textContent =
+        count === allAppeals.length
+          ? `Showing all ${count} appeal${count !== 1 ? 's' : ''}`
+          : `Showing ${count} of ${allAppeals.length} appeal${allAppeals.length !== 1 ? 's' : ''}`;
+    }
+
+    function formatDate(val) {
+      if (!val) return { date: '—', time: '' };
+      let d;
+      if (val?.toDate) d = val.toDate();
+      else if (typeof val === 'string') d = new Date(val);
+      else return { date: '—', time: '' };
+      return {
+        date: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
+        time: d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
+      };
+    }
+
+    function getInitials(name) {
+      const parts = (name || '').trim().split(' ').filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return '??';
+    }
+
+    function renderTable(appeals) {
+      const tbody = document.getElementById('appealsTable');
+
+      if (!appeals.length) {
+        tbody.innerHTML = `
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <div class="empty-icon">📭</div>
+              <p>No appeals found.</p>
+            </div>
+          </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = appeals.map((a, i) => {
+        const initials = getInitials(a.userName);
+        const color    = AVATAR_COLORS[a.colorIndex % AVATAR_COLORS.length];
+        const { date, time } = formatDate(a.submittedAt);
+
+        const statusBadge = a.status === 'approved'
+          ? '<span class="badge-active">Approved</span>'
+          : a.status === 'denied'
+          ? '<span class="badge-inactive">Denied</span>'
+          : '<span class="badge-pending">Pending</span>';
+
+        const actions = a.status === 'pending'
+          ? `<div class="action-wrap">
+               <button class="btn-approve" onclick="updateAppeal('${a.id}', '${a.userId}', 'approved')">Approve</button>
+               <button class="btn-deny"    onclick="updateAppeal('${a.id}', '${a.userId}', 'denied')">Deny</button>
+             </div>`
+          : '<span class="no-action">No actions</span>';
+
+        const shortMsg = (a.message || '—').length > 60
+          ? (a.message || '—').slice(0, 60) + '…'
+          : (a.message || '—');
+
+        return `
+          <tr>
+            <td style="color:var(--text-muted);font-size:0.82rem;">${i + 1}</td>
+            <td>
+              <div class="user-cell">
+                <div class="avatar-init" style="background:${color};">${initials}</div>
+                <div>
+                  <div class="user-name">${a.userName}</div>
+                  <div class="user-email">${a.userEmail}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              ${a.suspendReason !== '—'
+                ? `<span class="suspend-reason-badge">${a.suspendReason}</span>`
+                : '<span style="color:var(--text-muted);font-size:0.85rem;">—</span>'}
+            </td>
+            <td>
+              <span class="appeal-message">${shortMsg}</span>
+              ${(a.message || '').length > 0
+                ? `<button onclick="openModal('${a.id}')" style="background:none;border:none;color:var(--green-600);font-size:0.78rem;font-weight:700;cursor:pointer;padding:0;margin-left:4px;font-family:var(--font-body);">View</button>`
+                : ''}
+            </td>
+            <td>
+              <div class="date-cell">
+                ${date}
+                <span class="time">${time}</span>
+              </div>
+            </td>
+            <td>${statusBadge}</td>
+            <td>${actions}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    // ── MODAL ──
+    function openModal(appealId) {
+      const a = allAppeals.find(a => a.id === appealId);
+      if (!a) return;
+      currentModalId = appealId;
+
+      document.getElementById('modalUserName').textContent    = a.userName;
+      document.getElementById('modalUserEmail').textContent   = a.userEmail;
+      document.getElementById('modalSuspendReason').textContent = a.suspendReason;
+      document.getElementById('modalMessage').textContent     = a.message || '—';
+
+      const { date, time } = formatDate(a.submittedAt);
+      document.getElementById('modalSubmittedAt').textContent = `${date} ${time}`;
+
+      const statusEl = document.getElementById('modalStatus');
+      statusEl.innerHTML = a.status === 'approved'
+        ? '<span class="badge-active">Approved</span>'
+        : a.status === 'denied'
+        ? '<span class="badge-inactive">Denied</span>'
+        : '<span class="badge-pending">Pending</span>';
+
+      const actionsEl = document.getElementById('modalActions');
+      actionsEl.innerHTML = a.status === 'pending'
+        ? `<button class="btn-deny"    onclick="updateAppeal('${a.id}', '${a.userId}', 'denied',    true)">Deny</button>
+           <button class="btn-approve" onclick="updateAppeal('${a.id}', '${a.userId}', 'approved',  true)">Approve</button>`
+        : '';
+
+      document.getElementById('appealModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('appealModal').classList.remove('open');
+      currentModalId = null;
+    }
+
+    function closeModalOnOverlay(e) {
+      if (e.target === document.getElementById('appealModal')) closeModal();
+    }
+
+    // ── UPDATE APPEAL STATUS ──
+    async function updateAppeal(appealId, userId, newStatus, fromModal = false) {
+      try {
+        // Update the appeal document
+        await db.collection('appeals').doc(appealId).update({
+          status:     newStatus,
+          reviewedAt: new Date().toISOString()
+        });
+
+        // If approved → reactivate user account; if denied → keep suspended
+        if (newStatus === 'approved') {
+          await db.collection('users').doc(userId).update({
+            status:        'active',
+            suspendReason: firebase.firestore.FieldValue.delete(),
+            updatedAt:     new Date().toISOString()
+          });
+        }
+
+        // Update local state immediately (onSnapshot will also fire)
+        const appeal = allAppeals.find(a => a.id === appealId);
+        if (appeal) appeal.status = newStatus;
+
+        updateStats(allAppeals);
+        applyFilters();
+
+        if (fromModal) closeModal();
+
+        showToast(
+          newStatus === 'approved'
+            ? '✓ Appeal approved — account reactivated!'
+            : '✗ Appeal denied.'
+        );
+      } catch (err) {
+        console.error('Update appeal error:', err);
+        showToast('Something went wrong. Please try again.');
+      }
+    }
+
+    // ── FILTERS ──
+    function toggleFilterDropdown(wrapId, e) {
+      e.stopPropagation();
+      const wrap   = document.getElementById(wrapId);
+      const isOpen = wrap.classList.contains('open');
+      document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
+      if (!isOpen) wrap.classList.add('open');
+    }
+
+    function selectFilter(value, label, e) {
+      e.stopPropagation();
+      currentFilter = value;
+      document.getElementById('statusLabel').textContent = label;
+      document.querySelectorAll('#statusDropdown .filter-option').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.value === value);
+      });
+      document.getElementById('statusWrap').classList.remove('open');
+      applyFilters();
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
+    });
+
+    document.getElementById('appealSearch').addEventListener('input', applyFilters);
+
+    // ── TOAST ──
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('mainToast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

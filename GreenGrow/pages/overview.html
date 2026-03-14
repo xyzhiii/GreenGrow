@@ -15,6 +15,49 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    .stat-icon-wrap i svg {
+      width: 20px; height: 20px;
+      stroke: currentColor; display: block;
+    }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-amber i { color: var(--amber); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    .pie-card { display: flex; flex-direction: column; }
+    .pie-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 12px 0; width: 100%; height: 260px;
+    }
+    .pie-legend { margin-top: auto; padding-top: 16px; }
+
+    /* ✅ FIX: consistent quick-table alignment */
+    .quick-table { width: 100%; border-collapse: collapse; }
+    .quick-table tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .quick-table tr:last-child { border-bottom: none; }
+    .quick-table tr:hover { background: var(--green-50); }
+    .quick-table td { padding: 11px 6px; font-size: 0.84rem; }
+    .qt-label { color: var(--text-sub); font-weight: 500; }
+    .qt-val {
+      text-align: right;
+      width: 48px;
+    }
+    .qt-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      padding: 2px 9px;
+      border-radius: 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+    .qt-green { background: rgba(67,160,71,0.12); color: var(--green-800); }
+    .qt-amber { background: var(--amber-bg);       color: var(--amber); }
+    .qt-red   { background: var(--red-bg);         color: var(--red); }
+  </style>
 </head>
 
 <body>
@@ -37,37 +80,24 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
-        <div class="stat-body">
-          <h3 id="stat-users">—</h3>
-          <p>Total Users</p>
-        </div>
+        <div class="stat-body"><h3 id="stat-users">—</h3><p>Total Users</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-blue"><i data-lucide="sprout"></i></div>
-        <div class="stat-body">
-          <h3 id="stat-sellers">—</h3>
-          <p>Active Sellers</p>
-        </div>
+        <div class="stat-body"><h3 id="stat-sellers">—</h3><p>Active Sellers</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
-        <div class="stat-body">
-          <h3 id="stat-pending">—</h3>
-          <p>Pending Apps</p>
-        </div>
+        <div class="stat-body"><h3 id="stat-pending">—</h3><p>Pending Apps</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-red"><i data-lucide="shopping-bag"></i></div>
-        <div class="stat-body">
-          <h3 id="stat-orders">—</h3>
-          <p>Total Orders</p>
-        </div>
+        <div class="stat-body"><h3 id="stat-orders">—</h3><p>Total Orders</p></div>
       </div>
     </div>
 
     <!-- CHART ROW -->
     <div class="chart-row">
-      <!-- Bar Chart -->
       <div class="card">
         <div class="card-header">
           <span class="card-title">Sales & Revenue Trend</span>
@@ -78,7 +108,6 @@
         </div>
       </div>
 
-      <!-- Pie Chart -->
       <div class="card pie-card">
         <div class="card-header">
           <span class="card-title">User Breakdown</span>
@@ -92,7 +121,6 @@
 
     <!-- BOTTOM ROW -->
     <div class="bottom-row">
-      <!-- Activity Feed -->
       <div class="card">
         <div class="card-header">
           <span class="card-title">Recent Activity</span>
@@ -102,7 +130,6 @@
         </div>
       </div>
 
-      <!-- Quick Stats -->
       <div class="card">
         <div class="card-header">
           <span class="card-title">Quick Stats</span>
@@ -130,13 +157,14 @@
           </tr>
           <tr>
             <td class="qt-label">Total Orders</td>
-            <td class="qt-val"><span id="qs-orders" style="font-weight:700;color:var(--text-main)">—</span></td>
+            <!-- ✅ FIX: now uses qt-badge qt-green like all other rows -->
+            <td class="qt-val"><span class="qt-badge qt-green" id="qs-orders">—</span></td>
           </tr>
         </table>
       </div>
     </div>
 
-  </div><!-- end page-body -->
+  </div>
 
   <script>
     document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
@@ -175,42 +203,29 @@
     });
 
     function startListeners() {
-
-      // --- USERS listener: single source of truth for all user-related stats ---
       unsubs.push(
         db.collection('users').onSnapshot(snap => {
           let customers = 0, sellers = 0, active = 0, suspended = 0;
-
           snap.forEach(doc => {
             const d = doc.data();
-            if (d.role === 'admin') return; // exclude admins from all counts
+            if (d.role === 'admin') return;
             if (d.role === 'customer') customers++;
             if (d.role === 'seller')   sellers++;
             if (d.status === 'active')    active++;
             if (d.status === 'suspended') suspended++;
           });
-
           const total = customers + sellers;
-
-          // Stat cards
           document.getElementById('stat-users').textContent   = total;
           document.getElementById('stat-sellers').textContent = sellers;
-
-          // Quick stats
           document.getElementById('qs-active').textContent    = active;
           document.getElementById('qs-suspended').textContent = suspended;
           document.getElementById('qs-sellers').textContent   = sellers;
           document.getElementById('qs-customers').textContent = customers;
-
-          // Pie chart
           renderPieChart(customers, sellers);
-
-          // Refresh activity feed
           loadRecentActivity();
         })
       );
 
-      // --- PENDING APPLICATIONS listener ---
       unsubs.push(
         db.collection('sellerApplications')
           .where('applicationStatus', '==', 'pending')
@@ -220,7 +235,6 @@
           })
       );
 
-      // --- ORDERS listener: only delivered orders ---
       unsubs.push(
         db.collection('orders')
           .where('status', '==', 'delivered')
@@ -236,7 +250,6 @@
       const total = customers + sellers;
       const ctx = document.getElementById('pieChart').getContext('2d');
       if (window.pieChartInstance) window.pieChartInstance.destroy();
-
       window.pieChartInstance = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -250,29 +263,19 @@
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          aspectRatio: 1,
+          responsive: true, maintainAspectRatio: true, aspectRatio: 1,
           plugins: { legend: { display: false }, tooltip: { enabled: true } }
         }
       });
-
       const cPct = total > 0 ? Math.round((customers / total) * 100) : 0;
       const sPct = total > 0 ? Math.round((sellers   / total) * 100) : 0;
-
       document.getElementById('pieLegend').innerHTML = `
         <div class="legend-row">
-          <div class="legend-left">
-            <div class="legend-dot" style="background:#5aaa6e"></div>
-            Customers (${customers})
-          </div>
+          <div class="legend-left"><div class="legend-dot" style="background:#5aaa6e"></div>Customers (${customers})</div>
           <span class="legend-pct">${cPct}%</span>
         </div>
         <div class="legend-row">
-          <div class="legend-left">
-            <div class="legend-dot" style="background:#1b5e20"></div>
-            Sellers (${sellers})
-          </div>
+          <div class="legend-left"><div class="legend-dot" style="background:#1b5e20"></div>Sellers (${sellers})</div>
           <span class="legend-pct">${sPct}%</span>
         </div>`;
     }
@@ -285,32 +288,24 @@
         days.push({
           label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           dateStr: d.toISOString().split('T')[0],
-          revenue: 0,
-          orders: 0
+          revenue: 0, orders: 0
         });
       }
-
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
       sevenDaysAgo.setHours(0, 0, 0, 0);
-
       orderDocs.forEach(doc => {
         const data = doc.data();
         const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
         if (orderDate < sevenDaysAgo) return;
         const dateStr = orderDate.toISOString().split('T')[0];
         const day = days.find(d => d.dateStr === dateStr);
-        if (day) {
-          day.revenue += data.total || 0;
-          day.orders++;
-        }
+        if (day) { day.revenue += data.total || 0; day.orders++; }
       });
-
       const labels  = days.map(d => d.label);
       const revenue = days.map(d => d.revenue);
       const orders  = days.map(d => d.orders);
       const hasData = revenue.some(v => v > 0);
-
       if (!hasData) {
         document.getElementById('barChartWrap').innerHTML = `
           <div class="no-data">
@@ -319,36 +314,25 @@
           </div>`;
         return;
       }
-
       if (!document.getElementById('barChart')) {
         document.getElementById('barChartWrap').innerHTML = `<canvas id="barChart" height="130"></canvas>`;
       }
-
       const ctx = document.getElementById('barChart').getContext('2d');
       if (window.barChartInstance) window.barChartInstance.destroy();
-
       window.barChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
           labels,
           datasets: [
             {
-              label: 'Revenue (₱)',
-              data: revenue,
-              backgroundColor: 'rgba(90,170,110,0.85)',
-              borderRadius: 7,
-              borderSkipped: false,
-              hoverBackgroundColor: '#2e7d32',
-              yAxisID: 'yRevenue'
+              label: 'Revenue (₱)', data: revenue,
+              backgroundColor: 'rgba(90,170,110,0.85)', borderRadius: 7,
+              borderSkipped: false, hoverBackgroundColor: '#2e7d32', yAxisID: 'yRevenue'
             },
             {
-              label: 'Orders',
-              data: orders,
-              backgroundColor: 'rgba(245,158,11,0.80)',
-              borderRadius: 7,
-              borderSkipped: false,
-              hoverBackgroundColor: '#d97706',
-              yAxisID: 'yOrders'
+              label: 'Orders', data: orders,
+              backgroundColor: 'rgba(245,158,11,0.80)', borderRadius: 7,
+              borderSkipped: false, hoverBackgroundColor: '#d97706', yAxisID: 'yOrders'
             }
           ]
         },
@@ -357,14 +341,8 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
-              display: true,
-              position: 'top',
-              labels: {
-                color: '#7a9b7e',
-                font: { family: 'DM Sans', size: 11 },
-                boxWidth: 12,
-                padding: 16
-              }
+              display: true, position: 'top',
+              labels: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 }
             },
             tooltip: {
               callbacks: {
@@ -377,25 +355,14 @@
           },
           scales: {
             yRevenue: {
-              beginAtZero: true,
-              position: 'left',
+              beginAtZero: true, position: 'left',
               grid: { color: 'rgba(0,0,0,0.04)' },
-              ticks: {
-                color: '#7a9b7e',
-                font: { family: 'DM Sans', size: 11 },
-                callback: v => '₱' + v.toLocaleString()
-              }
+              ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, callback: v => '₱' + v.toLocaleString() }
             },
             yOrders: {
-              beginAtZero: true,
-              position: 'right',
+              beginAtZero: true, position: 'right',
               grid: { drawOnChartArea: false },
-              ticks: {
-                color: '#f59e0b',
-                font: { family: 'DM Sans', size: 11 },
-                stepSize: 1,
-                precision: 0
-              }
+              ticks: { color: '#f59e0b', font: { family: 'DM Sans', size: 11 }, stepSize: 1, precision: 0 }
             },
             x: {
               grid: { display: false },
@@ -417,54 +384,42 @@
           const time = log.timestamp?.toDate ? formatDate(log.timestamp.toDate()) : '—';
           list.innerHTML += activityRow(log.details?.description || log.action, time, getDotColor(log.action));
         });
-      } catch {
-        await buildFallbackActivity(list);
-      }
+      } catch { await buildFallbackActivity(list); }
     }
 
     async function buildFallbackActivity(list) {
       try {
         const [usersSnap, appsSnap] = await Promise.all([
-          db.collection('users').orderBy('createdAt', 'desc').limit(3).get(),
-          db.collection('sellerApplications').orderBy('createdAt', 'desc').limit(3).get()
+          db.collection('users').orderBy('createdAt', 'desc').limit(5).get(),
+          db.collection('sellerApplications').orderBy('createdAt', 'desc').limit(5).get()
         ]);
-
         const events = [];
-
         usersSnap.forEach(doc => {
           const d = doc.data();
           if (d.role === 'admin') return;
           const name    = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
           const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
           events.push({
-            text: d.role === 'seller'
-              ? `${name} became a seller`
-              : `${name} registered as customer`,
+            text: d.role === 'seller' ? `${name} became a seller` : `${name} registered as customer`,
             time: rawDate ? formatDate(rawDate) : 'recently',
             dot: d.role === 'seller' ? 'dot-blue' : 'dot-green',
             ts: rawDate ? rawDate.getTime() : 0
           });
         });
-
         appsSnap.forEach(doc => {
           const d = doc.data();
           const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
           events.push({
             text: `New seller application — status: ${d.applicationStatus || 'pending'}`,
             time: rawDate ? formatDate(rawDate) : 'recently',
-            dot: d.applicationStatus === 'approved' ? 'dot-blue'
-               : d.applicationStatus === 'rejected' ? 'dot-red' : 'dot-orange',
+            dot: d.applicationStatus === 'approved' ? 'dot-blue' : d.applicationStatus === 'rejected' ? 'dot-red' : 'dot-orange',
             ts: rawDate ? rawDate.getTime() : 0
           });
         });
-
         if (!events.length) { list.innerHTML = '<div class="no-activity">No activity yet.</div>'; return; }
-
         events.sort((a, b) => b.ts - a.ts);
         list.innerHTML = events.slice(0, 5).map(e => activityRow(e.text, e.time, e.dot)).join('');
-      } catch {
-        list.innerHTML = '<div class="no-activity">Could not load activity.</div>';
-      }
+      } catch { list.innerHTML = '<div class="no-activity">Could not load activity.</div>'; }
     }
 
     function activityRow(text, time, dotClass) {
@@ -494,35 +449,5 @@
 
     lucide.createIcons();
   </script>
-
-  <style>
-    .stat-icon-wrap i svg {
-      width: 20px; height: 20px;
-      stroke: currentColor; display: block;
-    }
-    .stat-icon-wrap.si-green i { color: var(--green-800); }
-    .stat-icon-wrap.si-blue  i { color: var(--blue); }
-    .stat-icon-wrap.si-amber i { color: var(--amber); }
-    .stat-icon-wrap.si-red   i { color: var(--red); }
-
-    /* Pie card — fill full card height, bigger chart */
-    .pie-card {
-      display: flex;
-      flex-direction: column;
-    }
-    .pie-wrap {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px 0;
-      width: 100%;
-      height: 260px;
-    }
-    .pie-legend {
-      margin-top: auto;
-      padding-top: 16px;
-    }
-  </style>
 </body>
 </html>

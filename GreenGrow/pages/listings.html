@@ -293,13 +293,24 @@
     }
 
     function applyFilters() {
-      const q = document.getElementById('appSearch').value.toLowerCase();
+      const q = document.getElementById('appSearch').value.toLowerCase().trim();
+
       const filtered = allApplications.filter(app => {
         const matchStatus = currentFilter === 'all' || app.applicationStatus === currentFilter;
-        const matchSearch = app.customerName.toLowerCase().includes(q)
-                         || app.customerEmail.toLowerCase().includes(q);
+
+        // Split name into parts for startsWith matching
+        const nameParts  = app.customerName.toLowerCase().split(' ').filter(Boolean);
+        const fullName   = app.customerName.toLowerCase();
+        const email      = app.customerEmail.toLowerCase();
+
+        const matchSearch = !q
+          || nameParts.some(part => part.startsWith(q))
+          || fullName.startsWith(q)
+          || email.startsWith(q);
+
         return matchStatus && matchSearch;
       });
+
       renderTable(filtered);
     }
 
@@ -353,7 +364,6 @@
           ? '<span class="badge-inactive">REJECTED</span>'
           : '<span class="badge-pending">PENDING</span>';
 
-        // ✅ approved = no actions, pending = approve + reject, rejected = no actions
         const actions = status === 'pending'
           ? `<div class="action-wrap">
                <button class="btn-approve" onclick="updateStatus('${app.id}', '${app.userId}', 'approved')">Approve</button>
