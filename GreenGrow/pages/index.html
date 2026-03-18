@@ -644,7 +644,7 @@
         if (data.status === 'suspended') { await auth.signOut(); throw new Error('Your account has been suspended.'); }
         if (data.status === 'pending')   { await auth.signOut(); throw new Error('Your account is pending approval.'); }
         showSuccess(`Welcome back, ${data.fullName || 'User'}!`);
-        setTimeout(() => { window.location.href = data.role === 'admin' ? 'admin.html' : 'index.html'; }, 1000);
+        setTimeout(() => { window.location.href = data.role === 'admin' ? 'overview.html' : 'index.html'; }, 1000);
       } catch (err) {
         setLoading(false);
         const msgs = {

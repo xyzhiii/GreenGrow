@@ -99,10 +99,13 @@ body {
 }
 
 /* page-level fade-in (used on iframe pages) */
-body {
+/* page-level fade-in — only on inner page content, not the body itself */
+.page-body {
   animation: pageFadeIn 0.28s var(--ease);
 }
-
+.topbar {
+  animation: pageFadeIn 0.22s var(--ease);
+}
 
 /* ========================
    BACKGROUND LAYER
