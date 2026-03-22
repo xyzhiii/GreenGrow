@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Analytics & Reports — GreenGrow</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="../assets/js/sidebar.js"></script>
+
+  <style>
+    body { overflow-x: hidden; }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 28px 0 12px;
+    }
+
+    .stats-row-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) { .stats-row-4 { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 500px) { .stats-row-4 { grid-template-columns: 1fr; } }
+
+    .stat-icon-wrap i svg { width: 20px; height: 20px; stroke: currentColor; display: block; }
+    .stat-icon-wrap.si-green i { color: var(--green-800); }
+    .stat-icon-wrap.si-blue  i { color: var(--blue); }
+    .stat-icon-wrap.si-amber i { color: var(--amber); }
+    .stat-icon-wrap.si-red   i { color: var(--red); }
+
+    .charts-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 820px) { .charts-grid-2 { grid-template-columns: 1fr; } }
+
+    .charts-grid-1 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 24px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .chart-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 10px;
+    }
+    .chart-card-title {
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .chart-card-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    /* ── Pie layout: canvas + legend side by side ── */
+    .pie-layout {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .pie-canvas-wrap {
+      flex-shrink: 0;
+      width: 180px;
+      height: 180px;
+    }
+    .pie-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pie-legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.83rem;
+    }
+    .pie-legend-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-sub);
+    }
+    .pie-legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .pie-legend-pct {
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 0.83rem;
+    }
+
+    /* ── Top reasons list ── */
+    .reason-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+    .reason-item { display: flex; align-items: center; gap: 10px; }
+    .reason-label {
+      font-size: 0.82rem; color: var(--text-sub);
+      min-width: 120px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .reason-bar-wrap {
+      flex: 1; height: 8px;
+      background: var(--green-50, #f1f8e9);
+      border-radius: 99px; overflow: hidden;
+    }
+    .reason-bar-fill {
+      height: 100%; border-radius: 99px;
+      background: var(--green-800);
+      transition: width 0.6s ease;
+    }
+    .reason-count {
+      font-size: 0.8rem; font-weight: 700;
+      color: var(--text-main); min-width: 24px; text-align: right;
+    }
+
+    .chart-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 16px;
+      color: var(--text-muted); font-size: 0.85rem; gap: 8px;
+    }
+    .chart-empty-icon { font-size: 2rem; }
+
+    .chart-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 16px;
+      color: var(--text-muted); font-size: 0.85rem; gap: 8px;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--green-800);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Analytics & Reports</h1>
+      <p>Platform insights and data overview</p>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate">—</div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <p class="section-label">Platform Summary</p>
+    <div class="stats-row-4">
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
+        <div class="stat-body"><h3 id="statTotalUsers">—</h3><p>Total Users</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-blue"><i data-lucide="store"></i></div>
+        <div class="stat-body"><h3 id="statActiveSellers">—</h3><p>Active Sellers</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-red"><i data-lucide="shield-off"></i></div>
+        <div class="stat-body"><h3 id="statSuspended">—</h3><p>Suspended Users</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap si-amber"><i data-lucide="inbox"></i></div>
+        <div class="stat-body"><h3 id="statPendingAppeals">—</h3><p>Pending Appeals</p></div>
+      </div>
+    </div>
+
+    <p class="section-label">User Analytics</p>
+    <div class="charts-grid-2">
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">User Growth</div>
+            <div class="chart-card-sub">New registrations per month</div>
+          </div>
+        </div>
+        <div id="userGrowthWrap">
+          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">User Breakdown</div>
+            <div class="chart-card-sub">Customers vs Sellers vs Admins</div>
+          </div>
+        </div>
+        <div id="userBreakdownWrap">
+          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="section-label">Seller & Moderation</p>
+    <div class="charts-grid-2">
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Seller Applications</div>
+            <div class="chart-card-sub">Approved vs Rejected vs Pending</div>
+          </div>
+        </div>
+        <div id="sellerAppsWrap">
+          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Suspension Reasons</div>
+            <div class="chart-card-sub">Why users get suspended</div>
+          </div>
+        </div>
+        <div id="suspendReasonsWrap">
+          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="section-label">Appeals</p>
+    <div class="charts-grid-1">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Appeals Over Time</div>
+            <div class="chart-card-sub">Monthly appeal volume by outcome</div>
+          </div>
+        </div>
+        <div id="appealsOverTimeWrap">
+          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+    });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+      authDomain: "greengrow-41922.firebaseapp.com",
+      projectId: "greengrow-41922",
+      storageBucket: "greengrow-41922.firebasestorage.app",
+      messagingSenderId: "12959500274",
+      appId: "1:12959500274:web:d782728c8fd90d3797cd6b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+    window.__ggAuthGuard(auth, db);
+
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.color       = '#888';
+
+    const GREEN      = '#5aaa6e';
+    const GREEN_DARK = '#1b5e20';
+    const BLUE       = '#1565c0';
+    const AMBER      = '#ef6c00';
+    const RED        = '#c62828';
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        loadAll();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
+
+    async function loadAll() {
+      const [usersSnap, appsSnap, appealsSnap] = await Promise.all([
+        db.collection('users').get(),
+        db.collection('sellerApplications').get(),
+        db.collection('appeals').get()
+      ]);
+
+      const users   = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const apps    = appsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const appeals = appealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Total users includes everyone
+      const totalUsers     = users.length;
+      const activeSellers  = users.filter(u => u.role === 'seller' && u.status === 'active').length;
+      const suspended      = users.filter(u => u.status === 'suspended').length;
+      const pendingAppeals = appeals.filter(a => a.resolved !== true).length;
+
+      document.getElementById('statTotalUsers').textContent     = totalUsers;
+      document.getElementById('statActiveSellers').textContent  = activeSellers;
+      document.getElementById('statSuspended').textContent      = suspended;
+      document.getElementById('statPendingAppeals').textContent = pendingAppeals;
+
+      renderUserGrowth(users);
+      renderUserBreakdown(users);
+      renderSellerApps(apps);
+      renderSuspendReasons(users);
+      renderAppealsOverTime(appeals);
+    }
+
+    function getMonthLabel(val) {
+      if (!val) return null;
+      let d;
+      if (val?.toDate)                  d = val.toDate();
+      else if (typeof val === 'string') d = new Date(val);
+      else return null;
+      return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    function lastNMonths(n) {
+      const labels = [];
+      const now = new Date();
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        labels.push(d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+      }
+      return labels;
+    }
+
+    // ── 1. User Growth ──
+    function renderUserGrowth(users) {
+      const wrap   = document.getElementById('userGrowthWrap');
+      const months = lastNMonths(6);
+      const counts = months.map(m =>
+        users.filter(u => getMonthLabel(u.createdAt) === m).length
+      );
+
+      if (counts.every(c => c === 0)) { wrap.innerHTML = emptyState('No registration data yet'); return; }
+
+      wrap.innerHTML = '<div class="chart-canvas-wrap" style="height:200px"><canvas id="chartUserGrowth"></canvas></div>';
+      new Chart(document.getElementById('chartUserGrowth'), {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'New Users',
+            data: counts,
+            borderColor: GREEN_DARK,
+            backgroundColor: 'rgba(46,125,50,0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: GREEN_DARK,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: true,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ── 2. User Breakdown (pie — includes admins) ──
+    function renderUserBreakdown(users) {
+      const wrap      = document.getElementById('userBreakdownWrap');
+      const customers = users.filter(u => u.role === 'customer').length;
+      const sellers   = users.filter(u => u.role === 'seller').length;
+      const admins    = users.filter(u => u.role === 'admin').length;
+      const total     = customers + sellers + admins;
+
+      if (total === 0) { wrap.innerHTML = emptyState('No user data yet'); return; }
+
+      const data   = [customers, sellers, admins];
+      const labels = ['Customers', 'Sellers', 'Admins'];
+      const colors = [GREEN, GREEN_DARK, BLUE];
+      const cPct   = Math.round((customers / total) * 100);
+      const sPct   = Math.round((sellers   / total) * 100);
+      const aPct   = Math.round((admins    / total) * 100);
+
+      wrap.innerHTML = `
+        <div class="pie-layout">
+          <div class="pie-canvas-wrap"><canvas id="chartUserBreakdown"></canvas></div>
+          <div class="pie-legend">
+            <div class="pie-legend-row">
+              <div class="pie-legend-left"><div class="pie-legend-dot" style="background:${GREEN}"></div>Customers (${customers})</div>
+              <span class="pie-legend-pct">${cPct}%</span>
+            </div>
+            <div class="pie-legend-row">
+              <div class="pie-legend-left"><div class="pie-legend-dot" style="background:${GREEN_DARK}"></div>Sellers (${sellers})</div>
+              <span class="pie-legend-pct">${sPct}%</span>
+            </div>
+            <div class="pie-legend-row">
+              <div class="pie-legend-left"><div class="pie-legend-dot" style="background:${BLUE}"></div>Admins (${admins})</div>
+              <span class="pie-legend-pct">${aPct}%</span>
+            </div>
+          </div>
+        </div>`;
+
+      new Chart(document.getElementById('chartUserBreakdown'), {
+        type: 'pie',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: colors, borderColor: ['#fff','#fff','#fff'], borderWidth: 3, hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: true, aspectRatio: 1,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        }
+      });
+    }
+
+    // ── 3. Seller Applications (pie) ──
+    function renderSellerApps(apps) {
+      const wrap = document.getElementById('sellerAppsWrap');
+      if (!apps.length) { wrap.innerHTML = emptyState('No applications yet'); return; }
+
+      const approved = apps.filter(a => (a.applicationStatus||'').toLowerCase() === 'approved').length;
+      const rejected = apps.filter(a => (a.applicationStatus||'').toLowerCase() === 'rejected').length;
+      const pending  = apps.filter(a => (a.applicationStatus||'').toLowerCase() === 'pending' || !a.applicationStatus).length;
+      const total    = approved + rejected + pending;
+
+      const data   = [approved, rejected, pending];
+      const labels = ['Approved', 'Rejected', 'Pending'];
+      const colors = [GREEN_DARK, RED, AMBER];
+
+      wrap.innerHTML = `
+        <div class="pie-layout">
+          <div class="pie-canvas-wrap"><canvas id="chartSellerApps"></canvas></div>
+          <div class="pie-legend">
+            ${labels.map((l, i) => `
+              <div class="pie-legend-row">
+                <div class="pie-legend-left"><div class="pie-legend-dot" style="background:${colors[i]}"></div>${l} (${data[i]})</div>
+                <span class="pie-legend-pct">${total ? Math.round(data[i]/total*100) : 0}%</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+
+      new Chart(document.getElementById('chartSellerApps'), {
+        type: 'pie',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: colors, borderColor: ['#fff','#fff','#fff'], borderWidth: 3, hoverOffset: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: true, aspectRatio: 1,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        }
+      });
+    }
+
+    // ── 4. Suspension Reasons ──
+    function renderSuspendReasons(users) {
+      const wrap      = document.getElementById('suspendReasonsWrap');
+      const suspended = users.filter(u => u.suspendReason);
+      if (!suspended.length) { wrap.innerHTML = emptyState('No suspensions yet'); return; }
+
+      const counts = {};
+      suspended.forEach(u => {
+        const r = (u.suspendReason || 'Unknown').trim();
+        counts[r] = (counts[r] || 0) + 1;
+      });
+
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const max    = sorted[0][1];
+
+      wrap.innerHTML = `<div class="reason-list">${
+        sorted.map(([reason, count], i) => `
+          <div class="reason-item">
+            <span class="reason-label" title="${reason}">${reason}</span>
+            <div class="reason-bar-wrap">
+              <div class="reason-bar-fill" style="width:${Math.round(count/max*100)}%;opacity:${1 - i*0.15}"></div>
+            </div>
+            <span class="reason-count">${count}</span>
+          </div>`).join('')
+      }</div>`;
+    }
+
+    // ── 5. Appeals Over Time ──
+    function renderAppealsOverTime(appeals) {
+      const wrap   = document.getElementById('appealsOverTimeWrap');
+      const months = lastNMonths(6);
+      if (!appeals.length) { wrap.innerHTML = emptyState('No appeals data yet'); return; }
+
+      const resolved   = months.map(m => appeals.filter(a => a.resolved === true && getMonthLabel(a.submittedAt || a.createdAt) === m).length);
+      const unresolved = months.map(m => appeals.filter(a => a.resolved !== true && getMonthLabel(a.submittedAt || a.createdAt) === m).length);
+
+      wrap.innerHTML = '<div class="chart-canvas-wrap" style="height:220px"><canvas id="chartAppealsTime"></canvas></div>';
+      new Chart(document.getElementById('chartAppealsTime'), {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            { label: 'Resolved',   data: resolved,   backgroundColor: GREEN_DARK, borderRadius: 4, borderSkipped: false },
+            { label: 'Unresolved', data: unresolved, backgroundColor: AMBER,      borderRadius: 4, borderSkipped: false }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top', labels: { boxWidth: 12, padding: 16, font: { size: 12 } } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: 'rgba(0,0,0,0.04)' } }
+          }
+        }
+      });
+    }
+
+    function emptyState(msg) {
+      return `<div class="chart-empty"><div class="chart-empty-icon">📭</div><span>${msg}</span></div>`;
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

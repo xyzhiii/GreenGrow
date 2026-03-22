@@ -92,10 +92,76 @@
 
     .date-cell { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
     .date-cell .time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 2px; }
+
+    /* ── CONFIRMATION MODAL ── */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10, 22, 14, 0.55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 32px 28px 24px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(10,22,14,0.18), 0 4px 16px rgba(10,22,14,0.1);
+      transform: translateY(12px) scale(0.97);
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease;
+      opacity: 0;
+    }
+    .confirm-overlay.open .confirm-modal { transform: translateY(0) scale(1); opacity: 1; }
+    .confirm-icon-wrap {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px; font-size: 1.5rem;
+    }
+    .confirm-icon-wrap.ci-warn { background: rgba(229,57,53,0.1); }
+    .confirm-icon-wrap.ci-ok   { background: rgba(46,125,50,0.1); }
+    .confirm-icon-wrap.ci-warn svg { stroke: var(--red,#e53935); }
+    .confirm-icon-wrap.ci-ok   svg { stroke: var(--green-800,#2e7d32); }
+    .confirm-title { font-size: 1.05rem; font-weight: 700; color: #1a2e1d; text-align: center; margin-bottom: 8px; }
+    .confirm-body  { font-size: 0.88rem; color: #556b5a; text-align: center; line-height: 1.55; margin-bottom: 24px; }
+    .confirm-body strong { color: #1a2e1d; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-cancel {
+      flex: 1; padding: 10px; border: 1.5px solid #d4e0d6; border-radius: 8px;
+      background: #fff; color: #556b5a; font-size: 0.88rem; font-weight: 600;
+      font-family: var(--font-body, 'DM Sans', sans-serif); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .confirm-cancel:hover { border-color: #a0b8a4; background: #f5faf6; }
+    .confirm-proceed {
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      font-size: 0.88rem; font-weight: 700;
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      cursor: pointer; transition: opacity 0.15s, transform 0.15s;
+    }
+    .confirm-proceed:hover { opacity: 0.88; transform: translateY(-1px); }
+    .confirm-proceed.cp-danger { background: var(--red,#e53935); color: #fff; }
+    .confirm-proceed.cp-ok    { background: var(--green-800,#2e7d32); color: #fff; }
   </style>
 </head>
 
 <body>
+
+  <!-- CONFIRMATION MODAL -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-icon-wrap" id="confirmIcon"></div>
+      <div class="confirm-title"     id="confirmTitle">Are you sure?</div>
+      <div class="confirm-body"      id="confirmBody"></div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel"  onclick="closeConfirm()">Cancel</button>
+        <button class="confirm-proceed" id="confirmProceed" onclick="runConfirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- TOP BAR -->
   <div class="topbar">
@@ -108,48 +174,30 @@
     </div>
   </div>
 
-  <!-- PAGE BODY -->
   <div class="page-body">
 
-    <!-- STAT CARDS -->
     <div class="stats-row-4">
       <div class="stat-card">
         <div class="stat-icon-wrap si-green"><i data-lucide="clipboard-list"></i></div>
-        <div class="stat-body">
-          <h3 id="statAll">—</h3>
-          <p>Total Applications</p>
-        </div>
+        <div class="stat-body"><h3 id="statAll">—</h3><p>Total Applications</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
-        <div class="stat-body">
-          <h3 id="statPending">—</h3>
-          <p>Pending</p>
-        </div>
+        <div class="stat-body"><h3 id="statPending">—</h3><p>Pending</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-blue"><i data-lucide="check-circle"></i></div>
-        <div class="stat-body">
-          <h3 id="statApproved">—</h3>
-          <p>Approved</p>
-        </div>
+        <div class="stat-body"><h3 id="statApproved">—</h3><p>Approved</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-red"><i data-lucide="x-circle"></i></div>
-        <div class="stat-body">
-          <h3 id="statRejected">—</h3>
-          <p>Rejected</p>
-        </div>
+        <div class="stat-body"><h3 id="statRejected">—</h3><p>Rejected</p></div>
       </div>
     </div>
 
-    <!-- MAIN CARD -->
     <div class="card">
-
-      <!-- TOOLBAR -->
       <div class="toolbar">
         <input type="text" id="appSearch" placeholder="Search by name or email…" />
-
         <div class="filter-wrap" id="statusWrap">
           <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
             <span id="statusLabel">All Applications</span>
@@ -165,7 +213,6 @@
         </div>
       </div>
 
-      <!-- TABLE -->
       <div class="table-wrap">
         <table class="admin-table">
           <thead>
@@ -187,11 +234,9 @@
         </table>
       </div>
 
-      <!-- TABLE FOOTER -->
       <div class="table-footer">
         <span id="tableCount" class="table-count">—</span>
       </div>
-
     </div>
   </div>
 
@@ -208,14 +253,66 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
-    let currentFilter = 'all';
-    let allApplications = [];
-    let unsubscribe = null;
 
-    const AVATAR_COLORS = [
-      '#2e7d32','#1565c0','#6a1b9a','#c62828',
-      '#ef6c00','#00838f','#37474f','#558b2f'
-    ];
+    let currentFilter   = 'all';
+    let allApplications = [];
+    let unsubscribe     = null;
+    let pendingAction   = null;
+
+    const AVATAR_COLORS = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+
+    const ICON_WARN = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>`;
+
+    const ICON_CHECK = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>`;
+
+    function openConfirm({ iconClass, iconSvg, title, body, btnClass, btnLabel, action }) {
+      document.getElementById('confirmIcon').className    = `confirm-icon-wrap ${iconClass}`;
+      document.getElementById('confirmIcon').innerHTML    = iconSvg;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmBody').innerHTML    = body;
+      const btn = document.getElementById('confirmProceed');
+      btn.className   = `confirm-proceed ${btnClass}`;
+      btn.textContent = btnLabel;
+      pendingAction   = action;
+      document.getElementById('confirmOverlay').classList.add('open');
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmOverlay').classList.remove('open');
+      pendingAction = null;
+    }
+
+    function runConfirmAction() {
+      if (typeof pendingAction !== 'function') return;
+      const action = pendingAction;
+      closeConfirm();
+      action();
+    }
+
+    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeConfirm();
+    });
+
+    function confirmStatus(applicationId, userId, newStatus, applicantName) {
+      const isApprove = newStatus === 'approved';
+      openConfirm({
+        iconClass: isApprove ? 'ci-ok'    : 'ci-warn',
+        iconSvg:   isApprove ? ICON_CHECK  : ICON_WARN,
+        title:     isApprove ? 'Approve Application?' : 'Reject Application?',
+        body:      isApprove
+          ? `You're about to <strong>approve</strong> the seller application from <strong>${applicantName}</strong>. They will be granted seller access.`
+          : `You're about to <strong>reject</strong> the seller application from <strong>${applicantName}</strong>. This action cannot be undone.`,
+        btnClass:  isApprove ? 'cp-ok'     : 'cp-danger',
+        btnLabel:  isApprove ? 'Yes, Approve' : 'Yes, Reject',
+        action:    () => updateStatus(applicationId, userId, newStatus),
+      });
+    }
 
     document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-US', {
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
@@ -225,12 +322,10 @@
 
     function listenApplications() {
       if (unsubscribe) unsubscribe();
-
       unsubscribe = db.collection('sellerApplications').onSnapshot(async (snap) => {
         const raw = [];
         snap.forEach(doc => raw.push({ id: doc.id, ...doc.data() }));
 
-        // Deduplicate: keep only the most recent application per userId
         const latestByUser = {};
         raw.forEach(app => {
           const existing = latestByUser[app.userId];
@@ -244,7 +339,6 @@
         });
         const deduplicated = Object.values(latestByUser);
 
-        // Enrich with user name + email
         allApplications = await Promise.all(deduplicated.map(async (app, i) => {
           try {
             const userDoc  = await db.collection('users').doc(app.userId).get();
@@ -280,30 +374,21 @@
 
     function applyFilters() {
       const q = document.getElementById('appSearch').value.toLowerCase().trim();
-
       const filtered = allApplications.filter(app => {
         const matchStatus = currentFilter === 'all' || app.applicationStatus === currentFilter;
-
-        // Split name into parts for startsWith matching
-        const nameParts  = app.customerName.toLowerCase().split(' ').filter(Boolean);
-        const fullName   = app.customerName.toLowerCase();
-        const email      = app.customerEmail.toLowerCase();
-
-        const matchSearch = !q
-          || nameParts.some(part => part.startsWith(q))
-          || fullName.startsWith(q)
-          || email.startsWith(q);
-
+        const nameParts   = app.customerName.toLowerCase().split(' ').filter(Boolean);
+        const fullName    = app.customerName.toLowerCase();
+        const email       = app.customerEmail.toLowerCase();
+        const matchSearch = !q || nameParts.some(p => p.startsWith(q)) || fullName.startsWith(q) || email.startsWith(q);
         return matchStatus && matchSearch;
       });
-
       renderTable(filtered);
     }
 
     function formatDate(val) {
       if (!val) return { date: '—', time: '' };
       let d;
-      if (val?.toDate) d = val.toDate();
+      if (val?.toDate)                  d = val.toDate();
       else if (typeof val === 'string') d = new Date(val);
       else return { date: '—', time: '' };
       return {
@@ -325,14 +410,12 @@
 
       if (!apps.length) {
         tbody.innerHTML = `
-          <tr>
-            <td colspan="5">
-              <div class="empty-state">
-                <i data-lucide="clipboard-x" style="width:40px;height:40px;stroke:#a5c8a5;margin-bottom:12px;"></i>
-                <p>No applications found.</p>
-              </div>
-            </td>
-          </tr>`;
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <i data-lucide="clipboard-x" style="width:40px;height:40px;stroke:#a5c8a5;margin-bottom:12px;"></i>
+              <p>No applications found.</p>
+            </div>
+          </td></tr>`;
         count.textContent = 'No applications';
         lucide.createIcons();
         return;
@@ -343,6 +426,7 @@
         const initials = getInitials(app.customerName);
         const color    = AVATAR_COLORS[app.colorIndex % AVATAR_COLORS.length];
         const { date, time } = formatDate(app.appliedAt);
+        const safeName = app.customerName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
         const badge = status === 'approved'
           ? '<span class="badge-active">APPROVED</span>'
@@ -352,8 +436,8 @@
 
         const actions = status === 'pending'
           ? `<div class="action-wrap">
-               <button class="btn-approve" onclick="updateStatus('${app.id}', '${app.userId}', 'approved')">Approve</button>
-               <button class="btn-reject"  onclick="updateStatus('${app.id}', '${app.userId}', 'rejected')">Reject</button>
+               <button class="btn-approve" onclick="confirmStatus('${app.id}', '${app.userId}', 'approved', '${safeName}')">Approve</button>
+               <button class="btn-reject"  onclick="confirmStatus('${app.id}', '${app.userId}', 'rejected', '${safeName}')">Reject</button>
              </div>`
           : '<span class="no-action">No actions</span>';
 
@@ -369,12 +453,7 @@
                 </div>
               </div>
             </td>
-            <td>
-              <div class="date-cell">
-                ${date}
-                <span class="time">${time}</span>
-              </div>
-            </td>
+            <td><div class="date-cell">${date}<span class="time">${time}</span></div></td>
             <td>${badge}</td>
             <td>${actions}</td>
           </tr>`;
@@ -390,11 +469,17 @@
       try {
         await db.collection('sellerApplications').doc(applicationId).update({
           applicationStatus: newStatus,
-          reviewedAt: new Date().toISOString()
+          reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        await db.collection('users').doc(userId).update({
+
+        // ── KEY CHANGE: write roleUpdatedAt so overview.html can show correct date ──
+        const userUpdate = {
           role: newStatus === 'approved' ? 'seller' : 'customer'
-        });
+        };
+        if (newStatus === 'approved') {
+          userUpdate.roleUpdatedAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+        await db.collection('users').doc(userId).update(userUpdate);
 
         const app = allApplications.find(a => a.id === applicationId);
         if (app) app.applicationStatus = newStatus;
@@ -407,7 +492,7 @@
 
     function toggleFilterDropdown(wrapperId, e) {
       e.stopPropagation();
-      const wrap = document.getElementById(wrapperId);
+      const wrap   = document.getElementById(wrapperId);
       const isOpen = wrap.classList.contains('open');
       document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
       if (!isOpen) wrap.classList.add('open');

@@ -18,52 +18,57 @@
   
   <script src="../assets/js/sidebar.js"></script>
   <style>
-    .stat-icon-wrap i svg {
-      width: 20px; height: 20px;
-      stroke: currentColor; display: block;
-    }
+    .stat-icon-wrap i svg { width: 20px; height: 20px; stroke: currentColor; display: block; }
     .stat-icon-wrap.si-green i { color: var(--green-800); }
     .stat-icon-wrap.si-blue  i { color: var(--blue); }
     .stat-icon-wrap.si-amber i { color: var(--amber); }
     .stat-icon-wrap.si-red   i { color: var(--red); }
 
     .pie-card { display: flex; flex-direction: column; }
-    .pie-wrap {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      padding: 12px 0; width: 100%; height: 260px;
-    }
+    .pie-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 0; width: 100%; height: 260px; }
     .pie-legend { margin-top: auto; padding-top: 16px; }
 
-    /* ✅ FIX: consistent quick-table alignment */
     .quick-table { width: 100%; border-collapse: collapse; }
     .quick-table tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
     .quick-table tr:last-child { border-bottom: none; }
     .quick-table tr:hover { background: var(--green-50); }
     .quick-table td { padding: 11px 6px; font-size: 0.84rem; }
     .qt-label { color: var(--text-sub); font-weight: 500; }
-    .qt-val {
-      text-align: right;
-      width: 48px;
-    }
-    .qt-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 32px;
-      padding: 2px 9px;
-      border-radius: 5px;
-      font-size: 0.74rem;
-      font-weight: 700;
-    }
+    .qt-val { text-align: right; width: 48px; }
+    .qt-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; padding: 2px 9px; border-radius: 5px; font-size: 0.74rem; font-weight: 700; }
     .qt-green { background: rgba(67,160,71,0.12); color: var(--green-800); }
-    .qt-amber { background: var(--amber-bg);       color: var(--amber); }
-    .qt-red   { background: var(--red-bg);         color: var(--red); }
+    .qt-amber { background: var(--amber-bg); color: var(--amber); }
+    .qt-red   { background: var(--red-bg);   color: var(--red); }
+
+    .chart-period-wrap { position: relative; display: inline-block; }
+    .chart-period-btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+      background: rgba(46,125,50,0.07); border: 1px solid rgba(46,125,50,0.2);
+      border-radius: 20px; color: var(--green-800); font-size: 0.78rem; font-weight: 700;
+      font-family: var(--font-body, 'DM Sans', sans-serif); cursor: pointer;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .chart-period-btn:hover { background: rgba(46,125,50,0.13); }
+    .chart-period-dropdown {
+      position: absolute; top: calc(100% + 6px); right: 0; background: #fff;
+      border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1); min-width: 140px; z-index: 999;
+      overflow: hidden; display: none;
+    }
+    .chart-period-dropdown.open { display: block; }
+    .chart-period-option {
+      display: block; width: 100%; text-align: left; padding: 9px 14px;
+      background: none; border: none; font-size: 0.83rem; font-weight: 500;
+      font-family: var(--font-body, 'DM Sans', sans-serif); color: var(--text-sub);
+      cursor: pointer; transition: background 0.12s;
+    }
+    .chart-period-option:hover { background: var(--green-50); }
+    .chart-period-option.selected { color: var(--green-800); font-weight: 700; background: rgba(46,125,50,0.06); }
   </style>
 </head>
 
 <body>
 
-  <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
       <h1>Dashboard Overview</h1>
@@ -74,10 +79,8 @@
     </div>
   </div>
 
-  <!-- PAGE BODY -->
   <div class="page-body">
 
-    <!-- STAT CARDS -->
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
@@ -97,70 +100,46 @@
       </div>
     </div>
 
-    <!-- CHART ROW -->
     <div class="chart-row">
       <div class="card">
         <div class="card-header">
           <span class="card-title">Sales & Revenue Trend</span>
-          <span class="card-badge">Last 7 Days</span>
+          <div class="chart-period-wrap" id="periodWrap">
+            <button class="chart-period-btn" id="periodBtn" onclick="togglePeriodDropdown(event)">Last 7 Days ▼</button>
+            <div class="chart-period-dropdown" id="periodDropdown">
+              <button class="chart-period-option selected" data-value="week"  onclick="selectPeriod('week',  'Last 7 Days',  event)">Last 7 Days</button>
+              <button class="chart-period-option"          data-value="month" onclick="selectPeriod('month', 'Last 30 Days', event)">Last 30 Days</button>
+              <button class="chart-period-option"          data-value="year"  onclick="selectPeriod('year',  'This Year',    event)">This Year</button>
+            </div>
+          </div>
         </div>
-        <div id="barChartWrap">
-          <canvas id="barChart" height="130"></canvas>
-        </div>
+        <div id="barChartWrap"><canvas id="barChart" height="130"></canvas></div>
       </div>
 
       <div class="card pie-card">
-        <div class="card-header">
-          <span class="card-title">User Breakdown</span>
-        </div>
-        <div class="pie-wrap">
-          <canvas id="pieChart"></canvas>
-        </div>
+        <div class="card-header"><span class="card-title">User Breakdown</span></div>
+        <div class="pie-wrap"><canvas id="pieChart"></canvas></div>
         <div id="pieLegend" class="pie-legend"></div>
       </div>
     </div>
 
-    <!-- BOTTOM ROW -->
     <div class="bottom-row">
       <div class="card">
-        <div class="card-header">
-          <span class="card-title">Recent Activity</span>
-        </div>
+        <div class="card-header"><span class="card-title">Recent Activity</span></div>
         <div class="activity-list" id="recentList">
           <p style="color:var(--text-muted);font-size:0.85rem;">Loading activity…</p>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header">
-          <span class="card-title">Quick Stats</span>
-        </div>
+        <div class="card-header"><span class="card-title">Quick Stats</span></div>
         <table class="quick-table">
-          <tr>
-            <td class="qt-label">Active Users</td>
-            <td class="qt-val"><span class="qt-badge qt-green" id="qs-active">—</span></td>
-          </tr>
-          <tr>
-            <td class="qt-label">Suspended Users</td>
-            <td class="qt-val"><span class="qt-badge qt-red" id="qs-suspended">—</span></td>
-          </tr>
-          <tr>
-            <td class="qt-label">Pending Applications</td>
-            <td class="qt-val"><span class="qt-badge qt-amber" id="qs-pending">—</span></td>
-          </tr>
-          <tr>
-            <td class="qt-label">Approved Sellers</td>
-            <td class="qt-val"><span class="qt-badge qt-green" id="qs-sellers">—</span></td>
-          </tr>
-          <tr>
-            <td class="qt-label">Customers</td>
-            <td class="qt-val"><span class="qt-badge qt-green" id="qs-customers">—</span></td>
-          </tr>
-          <tr>
-            <td class="qt-label">Total Orders</td>
-            <!-- ✅ FIX: now uses qt-badge qt-green like all other rows -->
-            <td class="qt-val"><span class="qt-badge qt-green" id="qs-orders">—</span></td>
-          </tr>
+          <tr><td class="qt-label">Active Users</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-active">—</span></td></tr>
+          <tr><td class="qt-label">Suspended Users</td><td class="qt-val"><span class="qt-badge qt-red" id="qs-suspended">—</span></td></tr>
+          <tr><td class="qt-label">Pending Applications</td><td class="qt-val"><span class="qt-badge qt-amber" id="qs-pending">—</span></td></tr>
+          <tr><td class="qt-label">Approved Sellers</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-sellers">—</span></td></tr>
+          <tr><td class="qt-label">Customers</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-customers">—</span></td></tr>
+          <tr><td class="qt-label">Total Orders</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-orders">—</span></td></tr>
         </table>
       </div>
     </div>
@@ -184,9 +163,16 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
-    const unsubs = [];
+
+    let currentPeriod = 'week';
+    let allOrderDocs  = [];
+    const unsubs      = [];
+
     startListeners();
+
     function startListeners() {
+
+      // ── Users: stats + pie ──
       unsubs.push(
         db.collection('users').onSnapshot(snap => {
           let customers = 0, sellers = 0, active = 0, suspended = 0;
@@ -206,10 +192,59 @@
           document.getElementById('qs-sellers').textContent   = sellers;
           document.getElementById('qs-customers').textContent = customers;
           renderPieChart(customers, sellers);
-          loadRecentActivity();
         })
       );
 
+      // ── Real-time Recent Activity ──
+      // Uses roleUpdatedAt for sellers (date they became seller)
+      // Falls back to createdAt for customers or sellers without roleUpdatedAt
+      unsubs.push(
+        db.collection('users')
+          .orderBy('createdAt', 'desc')
+          .limit(10)
+          .onSnapshot(snap => {
+            const list   = document.getElementById('recentList');
+            const events = [];
+
+            snap.forEach(doc => {
+              const d = doc.data();
+              if (d.role === 'admin') return;
+
+              const name = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
+
+              // ── KEY CHANGE: sellers use roleUpdatedAt, customers use createdAt ──
+              let rawDate;
+              if (d.role === 'seller') {
+                rawDate = d.roleUpdatedAt?.toDate
+                  ? d.roleUpdatedAt.toDate()
+                  : d.createdAt?.toDate
+                  ? d.createdAt.toDate()
+                  : d.createdAt ? new Date(d.createdAt) : null;
+              } else {
+                rawDate = d.createdAt?.toDate
+                  ? d.createdAt.toDate()
+                  : d.createdAt ? new Date(d.createdAt) : null;
+              }
+
+              events.push({
+                text: d.role === 'seller' ? `${name} became a seller` : `${name} registered as customer`,
+                time: rawDate ? formatDate(rawDate) : 'recently',
+                dot:  d.role === 'seller' ? 'dot-blue' : 'dot-green',
+                ts:   rawDate ? rawDate.getTime() : 0
+              });
+            });
+
+            if (!events.length) {
+              list.innerHTML = '<div class="no-activity">No activity yet.</div>';
+              return;
+            }
+
+            events.sort((a, b) => b.ts - a.ts);
+            list.innerHTML = events.slice(0, 5).map(e => activityRow(e.text, e.time, e.dot)).join('');
+          })
+      );
+
+      // ── Pending applications ──
       unsubs.push(
         db.collection('sellerApplications')
           .where('applicationStatus', '==', 'pending')
@@ -219,37 +254,139 @@
           })
       );
 
+      // ── Orders ──
       unsubs.push(
         db.collection('orders')
           .where('status', '==', 'delivered')
           .onSnapshot(snap => {
             document.getElementById('stat-orders').textContent = snap.size;
             document.getElementById('qs-orders').textContent   = snap.size;
-            renderBarChart(snap.docs);
+            allOrderDocs = snap.docs;
+            renderBarChart(allOrderDocs, currentPeriod);
           })
       );
     }
 
+    // ── Period dropdown ──
+    function togglePeriodDropdown(e) {
+      e.stopPropagation();
+      document.getElementById('periodDropdown').classList.toggle('open');
+    }
+
+    function selectPeriod(value, label, e) {
+      e.stopPropagation();
+      currentPeriod = value;
+      document.getElementById('periodBtn').textContent = label + ' ▼';
+      document.querySelectorAll('.chart-period-option').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.value === value);
+      });
+      document.getElementById('periodDropdown').classList.remove('open');
+      renderBarChart(allOrderDocs, currentPeriod);
+    }
+
+    document.addEventListener('click', () => {
+      document.getElementById('periodDropdown').classList.remove('open');
+    });
+
+    // ── Bar chart ──
+    function renderBarChart(orderDocs, period) {
+      let days = [];
+      const now = new Date();
+
+      if (period === 'week') {
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now); d.setDate(d.getDate() - i);
+          days.push({ label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), dateStr: d.toISOString().split('T')[0], revenue: 0, orders: 0 });
+        }
+        const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 6); cutoff.setHours(0,0,0,0);
+        orderDocs.forEach(doc => {
+          const data = doc.data();
+          const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          if (orderDate < cutoff) return;
+          const day = days.find(d => d.dateStr === orderDate.toISOString().split('T')[0]);
+          if (day) { day.revenue += data.total || 0; day.orders++; }
+        });
+
+      } else if (period === 'month') {
+        for (let i = 29; i >= 0; i--) {
+          const d = new Date(now); d.setDate(d.getDate() - i);
+          days.push({ label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), dateStr: d.toISOString().split('T')[0], revenue: 0, orders: 0 });
+        }
+        const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 29); cutoff.setHours(0,0,0,0);
+        orderDocs.forEach(doc => {
+          const data = doc.data();
+          const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          if (orderDate < cutoff) return;
+          const day = days.find(d => d.dateStr === orderDate.toISOString().split('T')[0]);
+          if (day) { day.revenue += data.total || 0; day.orders++; }
+        });
+
+      } else if (period === 'year') {
+        const year = now.getFullYear();
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((label, m) => {
+          days.push({ label, month: m, year, revenue: 0, orders: 0 });
+        });
+        orderDocs.forEach(doc => {
+          const data = doc.data();
+          const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+          if (orderDate.getFullYear() !== year) return;
+          const bucket = days.find(d => d.month === orderDate.getMonth());
+          if (bucket) { bucket.revenue += data.total || 0; bucket.orders++; }
+        });
+      }
+
+      const labels  = days.map(d => d.label);
+      const revenue = days.map(d => d.revenue);
+      const orders  = days.map(d => d.orders);
+      const hasData = revenue.some(v => v > 0) || orders.some(v => v > 0);
+      const wrap    = document.getElementById('barChartWrap');
+
+      if (!hasData) {
+        wrap.innerHTML = `<div class="no-data"><div class="no-data-icon">📈</div><p>No sales data yet for this period.</p></div>`;
+        return;
+      }
+      if (!document.getElementById('barChart')) {
+        wrap.innerHTML = `<canvas id="barChart" height="130"></canvas>`;
+      }
+
+      const ctx = document.getElementById('barChart').getContext('2d');
+      if (window.barChartInstance) window.barChartInstance.destroy();
+      window.barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Revenue (₱)', data: revenue, backgroundColor: 'rgba(90,170,110,0.85)', borderRadius: 7, borderSkipped: false, hoverBackgroundColor: '#2e7d32', yAxisID: 'yRevenue' },
+            { label: 'Orders',      data: orders,  backgroundColor: 'rgba(245,158,11,0.80)', borderRadius: 7, borderSkipped: false, hoverBackgroundColor: '#d97706', yAxisID: 'yOrders'  }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 } },
+            tooltip: { callbacks: { label: (ctx) => ctx.dataset.label === 'Revenue (₱)' ? `  ₱${ctx.parsed.y.toLocaleString()}` : `  ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? 's' : ''}` } }
+          },
+          scales: {
+            yRevenue: { beginAtZero: true, position: 'left', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, callback: v => '₱' + v.toLocaleString() } },
+            yOrders:  { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#f59e0b', font: { family: 'DM Sans', size: 11 }, stepSize: 1, precision: 0 } },
+            x: { grid: { display: false }, ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, maxTicksLimit: period === 'month' ? 10 : undefined } }
+          }
+        }
+      });
+    }
+
     function renderPieChart(customers, sellers) {
       const total = customers + sellers;
-      const ctx = document.getElementById('pieChart').getContext('2d');
+      const ctx   = document.getElementById('pieChart').getContext('2d');
       if (window.pieChartInstance) window.pieChartInstance.destroy();
       window.pieChartInstance = new Chart(ctx, {
         type: 'pie',
         data: {
           labels: ['Customers', 'Sellers'],
-          datasets: [{
-            data: [customers, sellers],
-            backgroundColor: ['#5aaa6e', '#1b5e20'],
-            borderColor: ['#fff', '#fff'],
-            borderWidth: 3,
-            hoverOffset: 6
-          }]
+          datasets: [{ data: [customers, sellers], backgroundColor: ['#5aaa6e', '#1b5e20'], borderColor: ['#fff','#fff'], borderWidth: 3, hoverOffset: 6 }]
         },
-        options: {
-          responsive: true, maintainAspectRatio: true, aspectRatio: 1,
-          plugins: { legend: { display: false }, tooltip: { enabled: true } }
-        }
+        options: { responsive: true, maintainAspectRatio: true, aspectRatio: 1, plugins: { legend: { display: false }, tooltip: { enabled: true } } }
       });
       const cPct = total > 0 ? Math.round((customers / total) * 100) : 0;
       const sPct = total > 0 ? Math.round((sellers   / total) * 100) : 0;
@@ -264,148 +401,6 @@
         </div>`;
     }
 
-    function renderBarChart(orderDocs) {
-      const days = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        days.push({
-          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          dateStr: d.toISOString().split('T')[0],
-          revenue: 0, orders: 0
-        });
-      }
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-      orderDocs.forEach(doc => {
-        const data = doc.data();
-        const orderDate = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-        if (orderDate < sevenDaysAgo) return;
-        const dateStr = orderDate.toISOString().split('T')[0];
-        const day = days.find(d => d.dateStr === dateStr);
-        if (day) { day.revenue += data.total || 0; day.orders++; }
-      });
-      const labels  = days.map(d => d.label);
-      const revenue = days.map(d => d.revenue);
-      const orders  = days.map(d => d.orders);
-      const hasData = revenue.some(v => v > 0);
-      if (!hasData) {
-        document.getElementById('barChartWrap').innerHTML = `
-          <div class="no-data">
-            <div class="no-data-icon">📈</div>
-            <p>No sales data yet. Revenue will appear once orders come in.</p>
-          </div>`;
-        return;
-      }
-      if (!document.getElementById('barChart')) {
-        document.getElementById('barChartWrap').innerHTML = `<canvas id="barChart" height="130"></canvas>`;
-      }
-      const ctx = document.getElementById('barChart').getContext('2d');
-      if (window.barChartInstance) window.barChartInstance.destroy();
-      window.barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Revenue (₱)', data: revenue,
-              backgroundColor: 'rgba(90,170,110,0.85)', borderRadius: 7,
-              borderSkipped: false, hoverBackgroundColor: '#2e7d32', yAxisID: 'yRevenue'
-            },
-            {
-              label: 'Orders', data: orders,
-              backgroundColor: 'rgba(245,158,11,0.80)', borderRadius: 7,
-              borderSkipped: false, hoverBackgroundColor: '#d97706', yAxisID: 'yOrders'
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              display: true, position: 'top',
-              labels: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, boxWidth: 12, padding: 16 }
-            },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  if (ctx.dataset.label === 'Revenue (₱)') return `  ₱${ctx.parsed.y.toLocaleString()}`;
-                  return `  ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? 's' : ''}`;
-                }
-              }
-            }
-          },
-          scales: {
-            yRevenue: {
-              beginAtZero: true, position: 'left',
-              grid: { color: 'rgba(0,0,0,0.04)' },
-              ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 }, callback: v => '₱' + v.toLocaleString() }
-            },
-            yOrders: {
-              beginAtZero: true, position: 'right',
-              grid: { drawOnChartArea: false },
-              ticks: { color: '#f59e0b', font: { family: 'DM Sans', size: 11 }, stepSize: 1, precision: 0 }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { color: '#7a9b7e', font: { family: 'DM Sans', size: 11 } }
-            }
-          }
-        }
-      });
-    }
-
-    async function loadRecentActivity() {
-      const list = document.getElementById('recentList');
-      try {
-        const snap = await db.collection('systemLogs').orderBy('timestamp', 'desc').limit(5).get();
-        if (snap.empty) { await buildFallbackActivity(list); return; }
-        list.innerHTML = '';
-        snap.forEach(doc => {
-          const log  = doc.data();
-          const time = log.timestamp?.toDate ? formatDate(log.timestamp.toDate()) : '—';
-          list.innerHTML += activityRow(log.details?.description || log.action, time, getDotColor(log.action));
-        });
-      } catch { await buildFallbackActivity(list); }
-    }
-
-    async function buildFallbackActivity(list) {
-      try {
-        const [usersSnap, appsSnap] = await Promise.all([
-          db.collection('users').orderBy('createdAt', 'desc').limit(5).get(),
-          db.collection('sellerApplications').orderBy('createdAt', 'desc').limit(5).get()
-        ]);
-        const events = [];
-        usersSnap.forEach(doc => {
-          const d = doc.data();
-          if (d.role === 'admin') return;
-          const name    = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
-          const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
-          events.push({
-            text: d.role === 'seller' ? `${name} became a seller` : `${name} registered as customer`,
-            time: rawDate ? formatDate(rawDate) : 'recently',
-            dot: d.role === 'seller' ? 'dot-blue' : 'dot-green',
-            ts: rawDate ? rawDate.getTime() : 0
-          });
-        });
-        appsSnap.forEach(doc => {
-          const d = doc.data();
-          const rawDate = d.createdAt?.toDate ? d.createdAt.toDate() : d.createdAt ? new Date(d.createdAt) : null;
-          events.push({
-            text: `New seller application — status: ${d.applicationStatus || 'pending'}`,
-            time: rawDate ? formatDate(rawDate) : 'recently',
-            dot: d.applicationStatus === 'approved' ? 'dot-blue' : d.applicationStatus === 'rejected' ? 'dot-red' : 'dot-orange',
-            ts: rawDate ? rawDate.getTime() : 0
-          });
-        });
-        if (!events.length) { list.innerHTML = '<div class="no-activity">No activity yet.</div>'; return; }
-        events.sort((a, b) => b.ts - a.ts);
-        list.innerHTML = events.slice(0, 5).map(e => activityRow(e.text, e.time, e.dot)).join('');
-      } catch { list.innerHTML = '<div class="no-activity">Could not load activity.</div>'; }
-    }
-
     function activityRow(text, time, dotClass) {
       return `
         <div class="activity-item">
@@ -417,18 +412,8 @@
         </div>`;
     }
 
-    function getDotColor(action = '') {
-      const a = action.toLowerCase();
-      if (a.includes('suspend') || a.includes('reject')) return 'dot-red';
-      if (a.includes('approv') || a.includes('activ'))   return 'dot-blue';
-      if (a.includes('apply')  || a.includes('pending')) return 'dot-orange';
-      return 'dot-green';
-    }
-
     function formatDate(date) {
-      return new Date(date).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
-      });
+      return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     lucide.createIcons();

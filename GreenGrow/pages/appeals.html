@@ -3,237 +3,184 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Account Appeals — GreenGrow</title>
+  <title>Support Messages — GreenGrow</title>
   <link rel="stylesheet" href="../assets/css/style.css" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  
   <script src="../assets/js/sidebar.js"></script>
   <style>
     body { overflow-x: hidden; }
-
-    .stat-icon-wrap i svg {
-      width: 20px; height: 20px;
-      stroke: currentColor; display: block;
-    }
-    .stat-icon-wrap.si-green i { color: var(--green-800); }
-    .stat-icon-wrap.si-blue  i { color: var(--blue); }
-    .stat-icon-wrap.si-amber i { color: var(--amber); }
-    .stat-icon-wrap.si-red   i { color: var(--red); }
-
-    .stats-row-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 22px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    @media (max-width: 900px) { .stats-row-4 { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 500px) { .stats-row-4 { grid-template-columns: 1fr; } }
-
-    .admin-table { table-layout: fixed; width: 100%; min-width: 760px; }
+    .admin-table { table-layout: fixed; width: 100%; min-width: 640px; }
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 36px; text-align: center; }
     .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 200px; }
-    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 140px; }
-    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: auto; }
-    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 130px; }
-    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 100px; text-align: center; }
+    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 100px; }
+    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 140px; }
+    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: auto; }
+    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 130px; }
     .admin-table th:nth-child(7), .admin-table td:nth-child(7) { width: 160px; text-align: center; }
-
-    /* All cells: centered vertically, padded, no overflow */
-    .admin-table th {
-      padding: 12px 14px;
-      text-align: center;
-      vertical-align: middle;
-    }
-    .admin-table td {
-      padding: 14px 14px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: middle;
-      text-align: center;
-    }
-    /* User cell: left-aligned, allow wrapping for long emails */
-    .admin-table td:nth-child(2) {
-      white-space: normal;
-      overflow-wrap: break-word;
-      word-break: break-all;
-      text-align: left;
-      padding-left: 12px;
-    }
-    /* Appeal message: left-aligned, allow wrapping */
-    .admin-table td:nth-child(4) {
-      white-space: normal;
-      word-break: break-word;
-      text-align: left;
-    }
-    /* Suspend reason: centered, allow wrapping */
-    .admin-table td:nth-child(3) {
-      white-space: normal;
-      word-break: break-word;
-    }
-    /* Row hover highlight */
-    .admin-table tbody tr:hover td {
-      background: var(--green-50, #f1f8e9);
-    }
-
+    .admin-table th { padding: 12px 14px; text-align: center; vertical-align: middle; }
+    .admin-table td { padding: 14px 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; text-align: center; }
+    .admin-table td:nth-child(2) { white-space: normal; overflow-wrap: break-word; word-break: break-all; text-align: left; padding-left: 12px; }
+    .admin-table td:nth-child(5) { white-space: normal; word-break: break-word; text-align: left; }
+    .admin-table td:nth-child(4) { white-space: normal; word-break: break-word; }
+    .admin-table tbody tr:hover td { background: var(--green-50, #f1f8e9); }
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
-
-    .appeal-message {
-      font-size: 0.84rem;
-      color: var(--text-sub);
-      line-height: 1.5;
-      max-width: 280px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .action-wrap { display: flex; gap: 6px; align-items: center; justify-content: center; }
-
-    .btn-approve {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 5px 12px;
-      background: rgba(46,125,50,0.09);
-      border: 1px solid rgba(46,125,50,0.25);
-      border-radius: var(--radius-sm);
-      color: var(--green-800);
-      font-size: 0.78rem; font-weight: 700;
-      font-family: var(--font-body);
-      cursor: pointer; white-space: nowrap;
-      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
-    }
-    .btn-approve:hover {
-      background: var(--green-800); color: #fff;
-      box-shadow: 0 3px 10px rgba(46,125,50,0.25);
-      transform: translateY(-1px);
-    }
-
-    .btn-deny {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 5px 12px;
-      background: rgba(229,57,53,0.07);
-      border: 1px solid rgba(229,57,53,0.22);
-      border-radius: var(--radius-sm);
-      color: var(--red);
-      font-size: 0.78rem; font-weight: 700;
-      font-family: var(--font-body);
-      cursor: pointer; white-space: nowrap;
-      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
-    }
-    .btn-deny:hover {
-      background: var(--red); color: #fff;
-      box-shadow: 0 3px 10px rgba(229,57,53,0.25);
-      transform: translateY(-1px);
-    }
-
-    .no-action { font-size: 0.82rem; color: #bbb; font-style: italic; }
-
+    .appeal-message { font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .type-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 3px 9px; white-space: nowrap; letter-spacing: 0.2px; }
+    .type-badge.tb-appeal  { background: rgba(198,40,40,0.08); color: #c62828; border: 1px solid rgba(198,40,40,0.18); }
+    .type-badge.tb-support { background: rgba(46,125,50,0.08); color: var(--green-800); border: 1px solid rgba(46,125,50,0.18); }
+    .btn-approve { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; background: rgba(46,125,50,0.09); border: 1px solid rgba(46,125,50,0.25); border-radius: var(--radius-sm); color: var(--green-800); font-size: 0.76rem; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: background 0.18s, box-shadow 0.18s, transform 0.18s; }
+    .btn-approve:hover { background: var(--green-800); color: #fff; box-shadow: 0 3px 10px rgba(46,125,50,0.25); transform: translateY(-1px); }
+    .btn-reject { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; background: rgba(198,40,40,0.07); border: 1px solid rgba(198,40,40,0.22); border-radius: var(--radius-sm); color: #c62828; font-size: 0.76rem; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: background 0.18s, box-shadow 0.18s, transform 0.18s; }
+    .btn-reject:hover { background: #c62828; color: #fff; box-shadow: 0 3px 10px rgba(198,40,40,0.2); transform: translateY(-1px); }
+    .btn-mark-read { display: inline-flex; align-items: center; justify-content: center; padding: 5px 14px; background: rgba(100,100,100,0.07); border: 1px solid rgba(100,100,100,0.2); border-radius: var(--radius-sm); color: var(--text-sub); font-size: 0.76rem; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: background 0.18s; }
+    .btn-mark-read:hover { background: rgba(100,100,100,0.14); }
+    .action-btn-group { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-weight: 700; border-radius: 6px; padding: 3px 9px; white-space: nowrap; }
+    .status-badge.sb-approved { background: rgba(46,125,50,0.10); color: var(--green-800); border: 1px solid rgba(46,125,50,0.2); }
+    .status-badge.sb-rejected { background: rgba(198,40,40,0.08); color: #c62828; border: 1px solid rgba(198,40,40,0.18); }
+    .status-badge.sb-read     { background: rgba(100,100,100,0.07); color: var(--text-muted); border: 1px solid rgba(100,100,100,0.15); font-style: italic; }
+    .status-badge.sb-pending  { background: rgba(239,108,0,0.08); color: #e65100; border: 1px solid rgba(239,108,0,0.2); }
     .date-cell { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; }
     .date-cell .time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 2px; }
+    .appeal-modal { background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 28px 60px rgba(0,0,0,0.16); width: 100%; max-width: 500px; margin: 20px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.25s var(--ease); }
+    .appeal-modal-header { padding: 22px 26px 18px; display: flex; align-items: center; gap: 14px; position: relative; flex-shrink: 0; }
+    .appeal-modal-header.mh-appeal  { background: linear-gradient(135deg, #b71c1c, #c62828); }
+    .appeal-modal-header.mh-support { background: linear-gradient(135deg, var(--green-800), var(--green-900)); }
+    .appeal-modal-header .modal-icon { width: 44px; height: 44px; border-radius: 11px; background: rgba(255,255,255,0.18); border: 2px solid rgba(255,255,255,0.28); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
+    .appeal-modal-title { font-family: var(--font-display); font-size: 1.05rem; color: #fff; }
+    .appeal-modal-sub   { font-size: 0.78rem; color: rgba(255,255,255,0.68); margin-top: 3px; }
+    .appeal-modal-body  { padding: 22px 26px 26px; overflow-y: auto; flex: 1; }
+    .appeal-detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+    .appeal-detail-row:last-child { border-bottom: none; }
+    .appeal-detail-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0; padding-top: 2px; }
+    .appeal-detail-value { font-size: 0.88rem; font-weight: 500; color: var(--text-main); text-align: right; line-height: 1.5; }
+    .appeal-message-full { font-size: 0.9rem; color: var(--text-sub); line-height: 1.7; background: var(--green-50); border: 1px solid rgba(46,125,50,0.10); border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 14px; white-space: pre-wrap; word-break: break-word; }
+    .appeal-message-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 16px; margin-bottom: 6px; }
+    .admin-reason-box { font-size: 0.88rem; color: #b71c1c; line-height: 1.6; background: rgba(198,40,40,0.06); border: 1px solid rgba(198,40,40,0.18); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 8px; white-space: pre-wrap; word-break: break-word; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(10,22,14,0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 99999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-modal { background: #fff; border-radius: 14px; padding: 32px 28px 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(10,22,14,0.18), 0 4px 16px rgba(10,22,14,0.1); transform: translateY(12px) scale(0.97); transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease; opacity: 0; }
+    .confirm-overlay.open .confirm-modal { transform: translateY(0) scale(1); opacity: 1; }
+    .confirm-icon-wrap { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+    .confirm-icon-wrap.ci-ok   { background: rgba(46,125,50,0.1); } .confirm-icon-wrap.ci-ok svg { stroke: var(--green-800, #2e7d32); }
+    .confirm-icon-wrap.ci-red  { background: rgba(198,40,40,0.1); } .confirm-icon-wrap.ci-red svg { stroke: #c62828; }
+    .confirm-icon-wrap.ci-gray { background: rgba(100,100,100,0.1); } .confirm-icon-wrap.ci-gray svg { stroke: #666; }
+    .confirm-title { font-size: 1.05rem; font-weight: 700; color: #1a2e1d; text-align: center; margin-bottom: 8px; }
+    .confirm-body  { font-size: 0.88rem; color: #556b5a; text-align: center; line-height: 1.55; margin-bottom: 16px; }
+    .confirm-body strong { color: #1a2e1d; }
+    .reject-reason-wrap { margin-bottom: 20px; }
+    .reject-reason-wrap label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+    .reject-reason-wrap textarea { width: 100%; box-sizing: border-box; border: 1.5px solid #d4e0d6; border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; font-family: var(--font-body, 'DM Sans', sans-serif); color: #1a2e1d; resize: vertical; min-height: 90px; transition: border-color 0.15s; }
+    .reject-reason-wrap textarea:focus { outline: none; border-color: #c62828; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-cancel { flex: 1; padding: 10px; border: 1.5px solid #d4e0d6; border-radius: 8px; background: #fff; color: #556b5a; font-size: 0.88rem; font-weight: 600; font-family: var(--font-body, 'DM Sans', sans-serif); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .confirm-cancel:hover { border-color: #a0b8a4; background: #f5faf6; }
+    .confirm-proceed { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 700; font-family: var(--font-body, 'DM Sans', sans-serif); cursor: pointer; transition: opacity 0.15s, transform 0.15s; }
+    .confirm-proceed:hover { opacity: 0.88; transform: translateY(-1px); }
+    .confirm-proceed.cp-ok   { background: var(--green-800, #2e7d32); color: #fff; }
+    .confirm-proceed.cp-red  { background: #c62828; color: #fff; }
+    .confirm-proceed.cp-gray { background: #555; color: #fff; }
+    /* ── Review button ── */
+    .btn-review {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 5px 14px;
+      background: rgba(21,101,192,0.08);
+      border: 1px solid rgba(21,101,192,0.22);
+      border-radius: var(--radius-sm);
+      color: #1565c0;
+      font-size: 0.76rem; font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+    }
+    .btn-review:hover {
+      background: #1565c0; color: #fff;
+      box-shadow: 0 3px 10px rgba(21,101,192,0.25);
+      transform: translateY(-1px);
+    }
 
-    .appeal-modal {
+    /* ── Review modal ── */
+    .review-modal {
       background: var(--surface);
       border-radius: var(--radius-lg);
-      box-shadow: 0 28px 60px rgba(0,0,0,0.16);
-      width: 100%;
-      max-width: 480px;
+      box-shadow: 0 28px 60px rgba(0,0,0,0.18);
+      width: 100%; max-width: 520px;
       margin: 20px;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
       overflow: hidden;
       animation: slideUp 0.25s var(--ease);
     }
-
-    .appeal-modal-header {
-      background: linear-gradient(135deg, var(--green-800), var(--green-900));
+    .review-modal-header {
+      background: linear-gradient(135deg, #1565c0, #1976d2);
       padding: 22px 26px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      position: relative;
+      display: flex; align-items: center; gap: 14px;
+      position: relative; flex-shrink: 0;
     }
-
-    .appeal-modal-header .modal-icon {
-      width: 44px; height: 44px;
-      border-radius: 11px;
+    .review-modal-header .modal-icon {
+      width: 44px; height: 44px; border-radius: 11px;
       background: rgba(255,255,255,0.18);
       border: 2px solid rgba(255,255,255,0.28);
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: 1.2rem;
+      flex-shrink: 0; font-size: 1.2rem;
     }
+    .review-modal-title { font-family: var(--font-display); font-size: 1.05rem; color: #fff; }
+    .review-modal-sub   { font-size: 0.78rem; color: rgba(255,255,255,0.68); margin-top: 3px; }
+    .review-modal-body  { padding: 22px 26px 26px; overflow-y: auto; flex: 1; }
 
-    .appeal-modal-title { font-family: var(--font-display); font-size: 1.05rem; color: #fff; }
-    .appeal-modal-sub   { font-size: 0.78rem; color: rgba(255,255,255,0.68); margin-top: 3px; }
-    .appeal-modal-body  { padding: 22px 26px 26px; }
-
-    .appeal-detail-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      gap: 12px;
-    }
-    .appeal-detail-row:last-child { border-bottom: none; }
-    .appeal-detail-label {
-      font-size: 0.74rem; font-weight: 700; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.4px;
-      flex-shrink: 0; padding-top: 2px;
-    }
-    .appeal-detail-value { font-size: 0.88rem; font-weight: 500; color: var(--text-main); text-align: right; line-height: 1.5; }
-
-    .appeal-message-full {
-      font-size: 0.9rem; color: var(--text-sub); line-height: 1.7;
+    .review-info-box {
       background: var(--green-50);
       border: 1px solid rgba(46,125,50,0.10);
       border-radius: var(--radius-sm);
-      padding: 14px 16px; margin-top: 14px;
-      white-space: pre-wrap; word-break: break-word;
+      padding: 14px 16px; margin-bottom: 16px;
+      font-size: 0.88rem; color: var(--text-sub);
+      line-height: 1.7; white-space: pre-wrap; word-break: break-word;
     }
-    .appeal-message-label {
+    .review-suspend-box {
+      background: rgba(198,40,40,0.06);
+      border: 1px solid rgba(198,40,40,0.15);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px; margin-bottom: 16px;
+      font-size: 0.88rem; color: #b71c1c;
+      font-weight: 600; line-height: 1.6;
+    }
+    .review-section-label {
       font-size: 0.74rem; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: 0.4px;
-      margin-top: 16px; margin-bottom: 6px;
+      margin-bottom: 8px; margin-top: 16px;
     }
-    .modal-footer-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .review-section-label:first-child { margin-top: 0; }
+    .review-textarea {
+      width: 100%; box-sizing: border-box;
+      border: 1.5px solid #d4e0d6; border-radius: 8px;
+      padding: 10px 12px; font-size: 0.88rem;
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      color: #1a2e1d; resize: vertical; min-height: 100px;
+      transition: border-color 0.15s; margin-bottom: 20px;
+    }
+    .review-textarea:focus { outline: none; border-color: #1565c0; }
+    .review-user-row {
+      display: flex; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid var(--border); gap: 12px;
+    }
+    .review-user-row:last-child { border-bottom: none; }
+    .review-user-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .review-user-value { font-size: 0.88rem; font-weight: 500; color: var(--text-main); text-align: right; }
+    .review-action-row { display: flex; gap: 10px; margin-top: 4px; }
 
-    .suspend-reason-badge {
-      display: inline-block; font-size: 0.74rem;
-      background: var(--red-bg); color: var(--red);
-      border: 1px solid rgba(229,57,53,0.18);
-      border-radius: 6px; padding: 3px 8px; font-weight: 700; white-space: nowrap;
-    }
-    .user-email {
-      font-size: 0.74rem;
-      color: var(--text-muted);
-      margin-top: 3px;
-      overflow-wrap: break-word;
-      word-break: break-all;
-      max-width: 170px;
-    }
-    .user-name {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-main);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 170px;
-    }
+    .suspend-reason-badge { display: inline-block; font-size: 0.74rem; background: var(--red-bg); color: var(--red); border: 1px solid rgba(229,57,53,0.18); border-radius: 6px; padding: 3px 8px; font-weight: 700; white-space: nowrap; }
+    .user-email { font-size: 0.74rem; color: var(--text-muted); margin-top: 3px; overflow-wrap: break-word; word-break: break-all; max-width: 170px; }
+    .user-name  { font-size: 0.88rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
   </style>
 </head>
-
 <body>
 
   <div class="toast" id="mainToast">
@@ -241,11 +188,11 @@
     <span id="toastMsg">Done!</span>
   </div>
 
-  <!-- APPEAL DETAIL MODAL -->
+  <!-- MESSAGE DETAIL MODAL -->
   <div class="modal-overlay" id="appealModal" onclick="closeModalOnOverlay(event)">
     <div class="appeal-modal">
-      <div class="appeal-modal-header">
-        <div class="modal-icon">📋</div>
+      <div class="appeal-modal-header" id="modalHeader">
+        <div class="modal-icon" id="modalIcon">💬</div>
         <div>
           <div class="appeal-modal-title" id="modalUserName">—</div>
           <div class="appeal-modal-sub"   id="modalUserEmail">—</div>
@@ -253,21 +200,100 @@
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="appeal-modal-body">
-        <div class="appeal-detail-row">
+        <div class="appeal-detail-row" id="modalSuspendRow">
           <span class="appeal-detail-label">Suspend Reason</span>
           <span class="appeal-detail-value" id="modalSuspendReason">—</span>
         </div>
         <div class="appeal-detail-row">
-          <span class="appeal-detail-label">Submitted</span>
-          <span class="appeal-detail-value" id="modalSubmittedAt">—</span>
+          <span class="appeal-detail-label">Type</span>
+          <span class="appeal-detail-value" id="modalType">—</span>
         </div>
         <div class="appeal-detail-row">
           <span class="appeal-detail-label">Status</span>
           <span class="appeal-detail-value" id="modalStatus">—</span>
         </div>
+        <div class="appeal-detail-row">
+          <span class="appeal-detail-label">Submitted</span>
+          <span class="appeal-detail-value" id="modalSubmittedAt">—</span>
+        </div>
         <div class="appeal-message-label">Appeal Message</div>
         <div class="appeal-message-full" id="modalMessage">—</div>
-        <div class="modal-footer-btns" id="modalActions"></div>
+        <div id="modalAdminReasonWrap" style="display:none;">
+          <div class="appeal-message-label" style="margin-top:16px;color:#c62828;">Admin Reason for Rejection</div>
+          <div class="admin-reason-box" id="modalAdminReason">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRMATION MODAL -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-icon-wrap" id="confirmIconWrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="confirmIconSvg">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <div class="confirm-title" id="confirmTitle">Confirm Action</div>
+      <div class="confirm-body"  id="confirmBody">Are you sure?</div>
+      <div class="reject-reason-wrap" id="rejectReasonWrap" style="display:none;">
+        <label for="rejectReasonInput">Reason for rejection</label>
+        <textarea id="rejectReasonInput" placeholder="Explain why this appeal is being rejected…"></textarea>
+      </div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel"  onclick="closeConfirm()">Cancel</button>
+        <button class="confirm-proceed" id="confirmYesBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW MODAL -->
+  <div class="modal-overlay" id="reviewModal" onclick="closeReviewOnOverlay(event)">
+    <div class="review-modal">
+      <div class="review-modal-header">
+        <div class="modal-icon">📋</div>
+        <div>
+          <div class="review-modal-title" id="reviewModalName">—</div>
+          <div class="review-modal-sub"   id="reviewModalEmail">—</div>
+        </div>
+        <button class="modal-close" onclick="closeReviewModal()">✕</button>
+      </div>
+      <div class="review-modal-body">
+
+        <!-- User info -->
+        <div class="review-section-label">User Info</div>
+        <div class="review-user-row">
+          <span class="review-user-label">Name</span>
+          <span class="review-user-value" id="reviewUserName">—</span>
+        </div>
+        <div class="review-user-row">
+          <span class="review-user-label">Email</span>
+          <span class="review-user-value" id="reviewUserEmail">—</span>
+        </div>
+        <div class="review-user-row" style="margin-bottom:16px;">
+          <span class="review-user-label">Submitted</span>
+          <span class="review-user-value" id="reviewSubmittedAt">—</span>
+        </div>
+
+        <!-- Suspend reason -->
+        <div class="review-section-label">Reason for Suspension</div>
+        <div class="review-suspend-box" id="reviewSuspendReason">—</div>
+
+        <!-- User's appeal message -->
+        <div class="review-section-label">User's Appeal Message</div>
+        <div class="review-info-box" id="reviewAppealMessage">—</div>
+
+        <!-- Admin message -->
+        <div class="review-section-label">Your Message to the User <span style="color:#c62828;">*</span></div>
+        <textarea class="review-textarea" id="reviewAdminMessage" placeholder="Write your response to the user. This message will be shown to them on their next login regardless of your decision…"></textarea>
+
+        <!-- Approve / Reject -->
+        <div class="review-action-row">
+          <button class="btn-approve" style="flex:1;padding:10px;" onclick="submitReview('approve')">✓ Approve Appeal</button>
+          <button class="btn-reject"  style="flex:1;padding:10px;" onclick="submitReview('reject')">✕ Reject Appeal</button>
+        </div>
+
       </div>
     </div>
   </div>
@@ -275,8 +301,8 @@
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
-      <h1>Account Appeals</h1>
-      <p>Review suspension appeals from users</p>
+      <h1>Support Messages</h1>
+      <p>Messages sent by users via the app</p>
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topbarDate">—</div>
@@ -284,67 +310,47 @@
   </div>
 
   <div class="page-body">
-
-    <div class="stats-row-4">
-      <div class="stat-card">
-        <div class="stat-icon-wrap si-green"><i data-lucide="inbox"></i></div>
-        <div class="stat-body"><h3 id="statTotal">—</h3><p>Total Appeals</p></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrap si-amber"><i data-lucide="clock"></i></div>
-        <div class="stat-body"><h3 id="statPending">—</h3><p>Pending</p></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrap si-blue"><i data-lucide="check-circle"></i></div>
-        <div class="stat-body"><h3 id="statApproved">—</h3><p>Approved</p></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrap si-red"><i data-lucide="x-circle"></i></div>
-        <div class="stat-body"><h3 id="statDenied">—</h3><p>Denied</p></div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="toolbar">
         <input type="text" id="appealSearch" placeholder="Search by name or email…" />
+        <div class="filter-wrap" id="typeWrap">
+          <button class="filter-btn" onclick="toggleFilterDropdown('typeWrap', event)">
+            <span id="typeLabel">All Types</span><span class="arrow">▼</span>
+          </button>
+          <div class="filter-dropdown" id="typeDropdown">
+            <p>Filter by type</p>
+            <button class="filter-option selected" data-value="all"     onclick="selectTypeFilter('all','All Types',event)">All Types</button>
+            <button class="filter-option"          data-value="appeal"  onclick="selectTypeFilter('appeal','Appeals',event)">Appeals</button>
+            <button class="filter-option"          data-value="support" onclick="selectTypeFilter('support','Support',event)">Support</button>
+          </div>
+        </div>
         <div class="filter-wrap" id="statusWrap">
           <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
-            <span id="statusLabel">All Appeals</span>
-            <span class="arrow">▼</span>
+            <span id="statusLabel">All Status</span><span class="arrow">▼</span>
           </button>
           <div class="filter-dropdown" id="statusDropdown">
             <p>Filter by status</p>
-            <button class="filter-option selected" data-value="all"      onclick="selectFilter('all',      'All Appeals', event)">All Appeals</button>
-            <button class="filter-option"          data-value="pending"  onclick="selectFilter('pending',  'Pending',     event)">Pending</button>
-            <button class="filter-option"          data-value="approved" onclick="selectFilter('approved', 'Approved',    event)">Approved</button>
-            <button class="filter-option"          data-value="denied"   onclick="selectFilter('denied',   'Denied',      event)">Denied</button>
+            <button class="filter-option selected" data-value="all"      onclick="selectStatusFilter('all','All Status',event)">All Status</button>
+            <button class="filter-option"          data-value="pending"  onclick="selectStatusFilter('pending','Pending',event)">Pending</button>
+            <button class="filter-option"          data-value="approved" onclick="selectStatusFilter('approved','Approved',event)">Approved</button>
+            <button class="filter-option"          data-value="rejected" onclick="selectStatusFilter('rejected','Rejected',event)">Rejected</button>
+            <button class="filter-option"          data-value="read"     onclick="selectStatusFilter('read','Read',event)">Read</button>
           </div>
         </div>
       </div>
-
       <div class="table-wrap">
         <table class="admin-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>User</th>
-              <th>Suspend Reason</th>
-              <th>Appeal Message</th>
-              <th>Submitted</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>#</th><th>User</th><th>Type</th><th>Suspend Reason</th>
+              <th>Message</th><th>Submitted</th><th>Action</th>
             </tr>
           </thead>
           <tbody id="appealsTable">
-            <tr>
-              <td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);">
-                Loading appeals…
-              </td>
-            </tr>
+            <tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);">Loading messages…</td></tr>
           </tbody>
         </table>
       </div>
-
       <div class="table-footer">
         <span class="table-footer-count" id="footerCount">Loading…</span>
       </div>
@@ -368,112 +374,80 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
+    window.__ggAuthGuard(auth, db);
+
     const AVATAR_COLORS = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
+    let allMessages = [], currentTypeFilter = 'all', currentStatusFilter = 'all';
+    let currentModalId = null, unsubMessages = null;
 
-    let allAppeals     = [];
-    let currentFilter  = 'all';
-    let currentModalId = null;
-    let unsubAppeals   = null;
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut(); window.parent.location.href = 'index.html'; return;
+        }
+        startMessagesListener();
+      } catch (err) { window.parent.location.href = 'index.html'; }
+    });
 
-    startAppealsListener();
-
-    function startAppealsListener() {
-      if (unsubAppeals) unsubAppeals();
-
-      // FIX: order by submittedAt — the field the app now sends
-      unsubAppeals = db.collection('appeals')
-        .orderBy('submittedAt', 'desc')
+    function startMessagesListener() {
+      if (unsubMessages) unsubMessages();
+      unsubMessages = db.collection('appeals').orderBy('submittedAt', 'desc')
         .onSnapshot(async (snap) => {
           const raw = [];
           snap.forEach(doc => raw.push({ id: doc.id, ...doc.data() }));
 
-          allAppeals = await Promise.all(raw.map(async (appeal, i) => {
-            let userName      = '';
-            let userEmail     = '';
-            let suspendReason = '';
+          allMessages = await Promise.all(raw.map(async (msg, i) => {
+            let userName = '', userEmail = '', suspendReason = '';
 
-            // Priority 1: look up the live user document using userId
-            if (appeal.userId && appeal.userId !== '') {
+            if (msg.userId) {
               try {
-                const userDoc  = await db.collection('users').doc(appeal.userId).get();
-                const userData = userDoc.exists ? userDoc.data() : null;
-                if (userData) {
-                  const fn = (userData.firstName || '').trim();
-                  const ln = (userData.lastName  || '').trim();
-                  // Deduplicate: if firstName === lastName only show it once
-                  userName      = (fn && ln && fn.toLowerCase() !== ln.toLowerCase())
-                                  ? fn + ' ' + ln
-                                  : fn || ln || '';
-                  userEmail     = userData.email || '';
-                  suspendReason = userData.suspendReason || '';
+                const ud = await db.collection('users').doc(msg.userId).get();
+                if (ud.exists) {
+                  const d = ud.data();
+                  const fn = (d.firstName || '').trim(), ln = (d.lastName || '').trim();
+                  userName      = (fn && ln && fn.toLowerCase() !== ln.toLowerCase()) ? fn + ' ' + ln : fn || ln || '';
+                  userEmail     = d.email || '';
+                  suspendReason = d.suspendReason || '';
                 }
-              } catch (e) { /* fall through */ }
+              } catch (e) {}
             }
 
-            // Priority 2: fall back to fields saved in the appeal document itself
             if (!userName) {
-              const fn = (appeal.firstName || '').trim();
-              const ln = (appeal.lastName  || '').trim();
-              if (fn || ln) {
-                userName = (fn && ln && fn.toLowerCase() !== ln.toLowerCase())
-                           ? fn + ' ' + ln
-                           : fn || ln;
-              } else {
-                userName = (appeal.name || '').trim() || '—';
-              }
+              const fn = (msg.firstName || '').trim(), ln = (msg.lastName || '').trim();
+              userName = (fn && ln && fn.toLowerCase() !== ln.toLowerCase()) ? fn + ' ' + ln : fn || ln || (msg.name || '').trim() || '—';
             }
-            if (!userEmail)     userEmail     = (appeal.email || '').trim() || '—';
-            if (!suspendReason) suspendReason = (appeal.suspendReason || '').trim() || '—';
+            if (!userEmail)     userEmail     = (msg.email || '').trim() || '—';
+            if (!suspendReason) suspendReason = (msg.suspendReason || '').trim() || '';
 
-            return {
-              ...appeal,
-              status:        (appeal.status || 'pending').toLowerCase(),
-              userName,
-              userEmail,
-              suspendReason,
-              colorIndex: i
-            };
+            const type   = msg.type === 'appeal' ? 'appeal' : 'support';
+            const status = type === 'appeal' ? (msg.appealStatus || 'pending') : (msg.isRead ? 'read' : 'pending');
+
+            return { ...msg, type, status, userName, userEmail, suspendReason, adminReason: (msg.adminReason || '').trim(), colorIndex: i };
           }));
 
-          updateStats(allAppeals);
           applyFilters();
-        }, err => console.error('Appeals listener error:', err));
-    }
-
-    function updateStats(appeals) {
-      document.getElementById('statTotal').textContent    = appeals.length;
-      document.getElementById('statPending').textContent  = appeals.filter(a => a.status === 'pending').length;
-      document.getElementById('statApproved').textContent = appeals.filter(a => a.status === 'approved').length;
-      document.getElementById('statDenied').textContent   = appeals.filter(a => a.status === 'denied').length;
+        }, err => console.error('Listener error:', err));
     }
 
     function applyFilters() {
       const q = document.getElementById('appealSearch').value.toLowerCase().trim();
-
-      const filtered = allAppeals.filter(a => {
-        const fullName = a.userName.toLowerCase();
-        const email    = a.userEmail.toLowerCase();
-        const matchSearch  = !q || fullName.includes(q) || email.includes(q);
-        const matchStatus  = currentFilter === 'all' || a.status === currentFilter;
-        return matchSearch && matchStatus;
+      const filtered = allMessages.filter(m => {
+        const matchSearch = !q || m.userName.toLowerCase().includes(q) || m.userEmail.toLowerCase().includes(q);
+        return matchSearch && (currentTypeFilter === 'all' || m.type === currentTypeFilter) && (currentStatusFilter === 'all' || m.status === currentStatusFilter);
       });
-
       renderTable(filtered);
-
       const count = filtered.length;
-      document.getElementById('footerCount').textContent =
-        count === allAppeals.length
-          ? `Showing all ${count} appeal${count !== 1 ? 's' : ''}`
-          : `Showing ${count} of ${allAppeals.length} appeal${allAppeals.length !== 1 ? 's' : ''}`;
+      document.getElementById('footerCount').textContent = count === allMessages.length
+        ? `Showing all ${count} message${count !== 1 ? 's' : ''}`
+        : `Showing ${count} of ${allMessages.length} message${allMessages.length !== 1 ? 's' : ''}`;
     }
 
     function formatDate(val) {
       if (!val) return { date: '—', time: '' };
-      let d;
-      // FIX: handle both Firestore Timestamp and ISO string (createdAt fallback)
-      if (val?.toDate)              d = val.toDate();
-      else if (typeof val === 'string') d = new Date(val);
-      else return { date: '—', time: '' };
+      let d = val?.toDate ? val.toDate() : typeof val === 'string' ? new Date(val) : null;
+      if (!d) return { date: '—', time: '' };
       return {
         date: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
         time: d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
@@ -481,107 +455,88 @@
     }
 
     function getInitials(name) {
-      const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      const p = (name || '').trim().split(/\s+/).filter(Boolean);
+      if (p.length >= 2) return (p[0][0] + p[p.length-1][0]).toUpperCase();
+      if (p.length === 1) return p[0].slice(0,2).toUpperCase();
       return '?';
     }
 
-    function renderTable(appeals) {
-      const tbody = document.getElementById('appealsTable');
+    function statusBadgeHtml(status) {
+      if (status === 'approved') return `<span class="status-badge sb-approved">✓ Approved</span>`;
+      if (status === 'rejected') return `<span class="status-badge sb-rejected">✕ Rejected</span>`;
+      if (status === 'read')     return `<span class="status-badge sb-read">✓ Read</span>`;
+      return `<span class="status-badge sb-pending">● Pending</span>`;
+    }
 
-      if (!appeals.length) {
-        tbody.innerHTML = `
-          <tr><td colspan="7">
-            <div class="empty-state">
-              <div class="empty-icon">📭</div>
-              <p>No appeals found.</p>
-            </div>
-          </td></tr>`;
+    function renderTable(messages) {
+      const tbody = document.getElementById('appealsTable');
+      if (!messages.length) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div><p>No messages found.</p></div></td></tr>`;
         return;
       }
+      tbody.innerHTML = messages.map((m, i) => {
+        const initials = getInitials(m.userName);
+        const color    = AVATAR_COLORS[m.colorIndex % AVATAR_COLORS.length];
+        const { date, time } = formatDate(m.submittedAt || m.createdAt);
+        const rawMsg   = (m.message || '').trim();
+        const shortMsg = rawMsg.length > 60 ? rawMsg.slice(0,60) + '…' : rawMsg || '—';
 
-      tbody.innerHTML = appeals.map((a, i) => {
-        const initials       = getInitials(a.userName);
-        const color          = AVATAR_COLORS[a.colorIndex % AVATAR_COLORS.length];
-        // FIX: read submittedAt first, fall back to createdAt
-        const { date, time } = formatDate(a.submittedAt || a.createdAt);
+        const typeBadge   = m.type === 'appeal' ? `<span class="type-badge tb-appeal">⚠ Appeal</span>` : `<span class="type-badge tb-support">💬 Support</span>`;
+        const suspendCell = m.type === 'appeal' && m.suspendReason ? `<span class="suspend-reason-badge">${m.suspendReason}</span>` : `<span style="color:var(--text-muted);font-size:0.85rem;">—</span>`;
 
-        const statusBadge = a.status === 'approved'
-          ? '<span class="badge-active">Approved</span>'
-          : a.status === 'denied'
-          ? '<span class="badge-inactive">Denied</span>'
-          : '<span class="badge-pending">Pending</span>';
-
-        const actions = a.status === 'pending'
-          ? `<div class="action-wrap">
-               <button class="btn-approve" onclick="updateAppeal('${a.id}', '${a.userId || ''}', 'approved')">Approve</button>
-               <button class="btn-deny"    onclick="updateAppeal('${a.id}', '${a.userId || ''}', 'denied')">Deny</button>
-             </div>`
-          : '<span class="no-action">No actions</span>';
-
-        const rawMsg  = (a.message || '').trim();
-        const shortMsg = rawMsg.length > 60 ? rawMsg.slice(0, 60) + '…' : rawMsg || '—';
+        let actionCell;
+        if (m.type === 'appeal') {
+          actionCell = (m.status === 'approved' || m.status === 'rejected')
+            ? statusBadgeHtml(m.status)
+            : `<button class="btn-review" onclick="openReviewModal('${m.id}')">Review</button>`;
+        } else {
+          actionCell = m.status === 'read' ? statusBadgeHtml('read') : `<button class="btn-mark-read" onclick="confirmAction('read','${m.id}')">Mark as Read</button>`;
+        }
 
         return `
           <tr>
-            <td style="color:var(--text-muted);font-size:0.82rem;">${i + 1}</td>
-            <td>
-              <div class="user-cell">
-                <div class="avatar-init" style="background:${color};">${initials}</div>
-                <div>
-                  <div class="user-name" style="word-break:break-word;white-space:normal;">${a.userName}</div>
-                  <div class="user-email">${a.userEmail}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              ${a.suspendReason !== '—'
-                ? `<span class="suspend-reason-badge">${a.suspendReason}</span>`
-                : '<span style="color:var(--text-muted);font-size:0.85rem;">—</span>'}
-            </td>
-            <td>
-              <span class="appeal-message">${shortMsg}</span>
-              ${(a.message || '').length > 0
-                ? `<button onclick="openModal('${a.id}')" style="background:none;border:none;color:var(--green-600);font-size:0.78rem;font-weight:700;cursor:pointer;padding:0;margin-left:4px;font-family:var(--font-body);">View</button>`
-                : ''}
-            </td>
-            <td>
-              <div class="date-cell">
-                ${date}<span class="time">${time}</span>
-              </div>
-            </td>
-            <td>${statusBadge}</td>
-            <td>${actions}</td>
+            <td style="color:var(--text-muted);font-size:0.82rem;">${i+1}</td>
+            <td><div class="user-cell"><div class="avatar-init" style="background:${color};">${initials}</div><div><div class="user-name" style="word-break:break-word;white-space:normal;">${m.userName}</div><div class="user-email">${m.userEmail}</div></div></div></td>
+            <td>${typeBadge}</td>
+            <td>${suspendCell}</td>
+            <td><span class="appeal-message">${shortMsg}</span>${rawMsg.length > 0 ? `<button onclick="openModal('${m.id}')" style="background:none;border:none;color:var(--green-600);font-size:0.78rem;font-weight:700;cursor:pointer;padding:0;margin-left:4px;font-family:var(--font-body);">View</button>` : ''}</td>
+            <td><div class="date-cell">${date}<span class="time">${time}</span></div></td>
+            <td>${actionCell}</td>
           </tr>`;
       }).join('');
     }
 
-    function openModal(appealId) {
-      const a = allAppeals.find(a => a.id === appealId);
-      if (!a) return;
-      currentModalId = appealId;
+    function openModal(msgId) {
+      const m = allMessages.find(m => m.id === msgId);
+      if (!m) return;
+      currentModalId = msgId;
 
-      document.getElementById('modalUserName').textContent      = a.userName || '—';
-      document.getElementById('modalUserEmail').textContent     = a.userEmail || '—';
-      document.getElementById('modalSuspendReason').textContent = a.suspendReason;
-      document.getElementById('modalMessage').textContent       = a.message || '—';
+      document.getElementById('modalHeader').className = 'appeal-modal-header ' + (m.type === 'appeal' ? 'mh-appeal' : 'mh-support');
+      document.getElementById('modalIcon').textContent      = m.type === 'appeal' ? '⚠️' : '💬';
+      document.getElementById('modalUserName').textContent  = m.userName || '—';
+      document.getElementById('modalUserEmail').textContent = m.userEmail || '—';
+      document.getElementById('modalType').textContent      = m.type === 'appeal' ? 'Account Appeal' : 'Support Message';
+      document.getElementById('modalStatus').innerHTML      = statusBadgeHtml(m.status);
 
-      const { date, time } = formatDate(a.submittedAt || a.createdAt);
-      document.getElementById('modalSubmittedAt').textContent   = `${date} ${time}`;
+      const suspendRow = document.getElementById('modalSuspendRow');
+      if (m.type === 'appeal') {
+        suspendRow.style.display = '';
+        document.getElementById('modalSuspendReason').textContent = m.suspendReason || '—';
+      } else {
+        suspendRow.style.display = 'none';
+      }
 
-      const statusEl = document.getElementById('modalStatus');
-      statusEl.innerHTML = a.status === 'approved'
-        ? '<span class="badge-active">Approved</span>'
-        : a.status === 'denied'
-        ? '<span class="badge-inactive">Denied</span>'
-        : '<span class="badge-pending">Pending</span>';
+      const { date, time } = formatDate(m.submittedAt || m.createdAt);
+      document.getElementById('modalSubmittedAt').textContent = `${date} ${time}`;
+      document.getElementById('modalMessage').textContent     = m.message || '—';
 
-      const actionsEl = document.getElementById('modalActions');
-      actionsEl.innerHTML = a.status === 'pending'
-        ? `<button class="btn-deny"    onclick="updateAppeal('${a.id}','${a.userId||''}','denied',   true)">Deny</button>
-           <button class="btn-approve" onclick="updateAppeal('${a.id}','${a.userId||''}','approved', true)">Approve</button>`
-        : '';
+      const adminWrap = document.getElementById('modalAdminReasonWrap');
+      if (m.type === 'appeal' && m.status === 'rejected' && m.adminReason) {
+        adminWrap.style.display = '';
+        document.getElementById('modalAdminReason').textContent = m.adminReason;
+      } else {
+        adminWrap.style.display = 'none';
+      }
 
       document.getElementById('appealModal').classList.add('open');
     }
@@ -595,72 +550,174 @@
       if (e.target === document.getElementById('appealModal')) closeModal();
     }
 
-    async function updateAppeal(appealId, userId, newStatus, fromModal = false) {
-      try {
-        await db.collection('appeals').doc(appealId).update({
-          status:     newStatus,
-          reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+    function confirmAction(action, msgId) {
+      const rejectWrap = document.getElementById('rejectReasonWrap');
+      const textarea   = document.getElementById('rejectReasonInput');
+      rejectWrap.style.display = action === 'reject' ? '' : 'none';
+      if (textarea) { textarea.value = ''; textarea.style.borderColor = '#d4e0d6'; }
 
-        // FIX: only update user document if userId is a valid non-empty string
-        if (newStatus === 'approved' && userId && userId !== '' && userId !== 'undefined') {
-          await db.collection('users').doc(userId).update({
-            status:        'active',
-            suspendReason: firebase.firestore.FieldValue.delete(),
-            updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
-          });
+      const configs = {
+        approve: { iconClass: 'ci-ok',   iconPath: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',                          title: 'Approve Appeal?', body: 'This will mark the appeal as <strong>Approved</strong>. The user will see this on their next login.',                                         btnClass: 'cp-ok',   btnText: 'Yes, Approve' },
+        reject:  { iconClass: 'ci-red',  iconPath: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',     title: 'Reject Appeal?',  body: 'Provide a reason below. The user will see this on their next login and can submit a new appeal.',                                          btnClass: 'cp-red',  btnText: 'Yes, Reject'  },
+        read:    { iconClass: 'ci-gray', iconPath: '<polyline points="20 6 9 17 4 12"/>',                                                                               title: 'Mark as Read?',   body: 'This will mark the support message as <strong>Read</strong>.',                                                                             btnClass: 'cp-gray', btnText: 'Mark as Read' }
+      };
+
+      const c = configs[action];
+      document.getElementById('confirmIconWrap').className = 'confirm-icon-wrap ' + c.iconClass;
+      document.getElementById('confirmIconSvg').innerHTML  = c.iconPath;
+      document.getElementById('confirmTitle').textContent  = c.title;
+      document.getElementById('confirmBody').innerHTML     = c.body;
+      const btn = document.getElementById('confirmYesBtn');
+      btn.className   = 'confirm-proceed ' + c.btnClass;
+      btn.textContent = c.btnText;
+      btn.onclick     = () => executeAction(action, msgId);
+      document.getElementById('confirmOverlay').classList.add('open');
+    }
+
+    function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
+    document.getElementById('confirmOverlay').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
+
+    async function executeAction(action, msgId) {
+      try {
+        let updateData = {}, toastMsg = '';
+
+        if (action === 'approve') {
+          updateData = { appealStatus: 'approved', resolvedAt: firebase.firestore.FieldValue.serverTimestamp() };
+          toastMsg   = 'Appeal approved.';
+        } else if (action === 'reject') {
+          const reason = document.getElementById('rejectReasonInput').value.trim();
+          if (!reason) {
+            const ta = document.getElementById('rejectReasonInput');
+            ta.style.borderColor = '#c62828'; ta.focus(); return;
+          }
+          updateData = { appealStatus: 'rejected', adminReason: reason, resolvedAt: firebase.firestore.FieldValue.serverTimestamp() };
+          toastMsg   = 'Appeal rejected.';
+        } else if (action === 'read') {
+          updateData = { isRead: true, readAt: firebase.firestore.FieldValue.serverTimestamp() };
+          toastMsg   = 'Message marked as read.';
         }
 
-        const appeal = allAppeals.find(a => a.id === appealId);
-        if (appeal) appeal.status = newStatus;
+        await db.collection('appeals').doc(msgId).update(updateData);
 
-        updateStats(allAppeals);
-        applyFilters();
-        if (fromModal) closeModal();
+        const msg = allMessages.find(m => m.id === msgId);
+        if (msg) {
+          Object.assign(msg, updateData);
+          if (action === 'approve') msg.status = 'approved';
+          if (action === 'reject')  { msg.status = 'rejected'; msg.adminReason = updateData.adminReason; }
+          if (action === 'read')    msg.status = 'read';
+        }
 
-        showToast(
-          newStatus === 'approved'
-            ? '✓ Appeal approved — account reactivated!'
-            : '✗ Appeal denied.'
-        );
-      } catch (err) {
-        console.error('Update appeal error:', err);
-        showToast('Something went wrong. Please try again.');
-      }
+        applyFilters(); closeConfirm(); showToast(toastMsg);
+      } catch (err) { console.error('Action error:', err); showToast('Something went wrong. Please try again.'); }
     }
 
     function toggleFilterDropdown(wrapId, e) {
       e.stopPropagation();
-      const wrap   = document.getElementById(wrapId);
-      const isOpen = wrap.classList.contains('open');
+      const wrap = document.getElementById(wrapId), isOpen = wrap.classList.contains('open');
       document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
       if (!isOpen) wrap.classList.add('open');
     }
 
-    function selectFilter(value, label, e) {
-      e.stopPropagation();
-      currentFilter = value;
-      document.getElementById('statusLabel').textContent = label;
-      document.querySelectorAll('#statusDropdown .filter-option').forEach(btn => {
-        btn.classList.toggle('selected', btn.dataset.value === value);
-      });
-      document.getElementById('statusWrap').classList.remove('open');
-      applyFilters();
+    function selectTypeFilter(value, label, e) {
+      e.stopPropagation(); currentTypeFilter = value;
+      document.getElementById('typeLabel').textContent = label;
+      document.querySelectorAll('#typeDropdown .filter-option').forEach(btn => btn.classList.toggle('selected', btn.dataset.value === value));
+      document.getElementById('typeWrap').classList.remove('open'); applyFilters();
     }
 
-    document.addEventListener('click', () => {
-      document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open'));
-    });
+    function selectStatusFilter(value, label, e) {
+      e.stopPropagation(); currentStatusFilter = value;
+      document.getElementById('statusLabel').textContent = label;
+      document.querySelectorAll('#statusDropdown .filter-option').forEach(btn => btn.classList.toggle('selected', btn.dataset.value === value));
+      document.getElementById('statusWrap').classList.remove('open'); applyFilters();
+    }
 
+    document.addEventListener('click', () => document.querySelectorAll('.filter-wrap').forEach(w => w.classList.remove('open')));
     document.getElementById('appealSearch').addEventListener('input', applyFilters);
 
     let toastTimer = null;
     function showToast(msg) {
       const toast = document.getElementById('mainToast');
       document.getElementById('toastMsg').textContent = msg;
-      toast.classList.add('show');
-      clearTimeout(toastTimer);
+      toast.classList.add('show'); clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ── Review Modal ──
+    let currentReviewId = null;
+
+    function openReviewModal(msgId) {
+      const m = allMessages.find(m => m.id === msgId);
+      if (!m) return;
+      currentReviewId = msgId;
+
+      document.getElementById('reviewModalName').textContent    = m.userName  || '—';
+      document.getElementById('reviewModalEmail').textContent   = m.userEmail || '—';
+      document.getElementById('reviewUserName').textContent     = m.userName  || '—';
+      document.getElementById('reviewUserEmail').textContent    = m.userEmail || '—';
+      document.getElementById('reviewSuspendReason').textContent = m.suspendReason || '—';
+      document.getElementById('reviewAppealMessage').textContent = m.message  || '—';
+      document.getElementById('reviewAdminMessage').value       = '';
+      document.getElementById('reviewAdminMessage').style.borderColor = '#d4e0d6';
+
+      const { date, time } = formatDate(m.submittedAt || m.createdAt);
+      document.getElementById('reviewSubmittedAt').textContent = `${date} ${time}`;
+
+      document.getElementById('reviewModal').classList.add('open');
+    }
+
+    function closeReviewModal() {
+      document.getElementById('reviewModal').classList.remove('open');
+      currentReviewId = null;
+    }
+
+    function closeReviewOnOverlay(e) {
+      if (e.target === document.getElementById('reviewModal')) closeReviewModal();
+    }
+
+    async function submitReview(action) {
+      const adminMessage = document.getElementById('reviewAdminMessage').value.trim();
+      if (!adminMessage) {
+        const ta = document.getElementById('reviewAdminMessage');
+        ta.style.borderColor = '#c62828';
+        ta.focus();
+        showToast('Please write a message to the user before proceeding.');
+        return;
+      }
+
+      const msgId = currentReviewId;
+      if (!msgId) return;
+
+      try {
+        let updateData = {
+          adminMessage: adminMessage,
+          resolvedAt:   firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (action === 'approve') {
+          updateData.appealStatus = 'approved';
+        } else {
+          updateData.appealStatus = 'rejected';
+          updateData.adminReason  = adminMessage; // also save as adminReason for app display
+        }
+
+        await db.collection('appeals').doc(msgId).update(updateData);
+
+        // Update local state
+        const msg = allMessages.find(m => m.id === msgId);
+        if (msg) {
+          Object.assign(msg, updateData);
+          msg.status      = updateData.appealStatus;
+          msg.adminReason = adminMessage;
+        }
+
+        applyFilters();
+        closeReviewModal();
+        showToast(action === 'approve' ? 'Appeal approved. User will be notified.' : 'Appeal rejected. User will be notified.');
+      } catch (err) {
+        console.error('Review submit error:', err);
+        showToast('Something went wrong. Please try again.');
+      }
     }
 
     lucide.createIcons();

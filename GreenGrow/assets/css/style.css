@@ -98,7 +98,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* page-level fade-in (used on iframe pages) */
 /* page-level fade-in — only on inner page content, not the body itself */
 .page-body {
   animation: pageFadeIn 0.28s var(--ease);
@@ -121,7 +120,7 @@ body {
 
 
 /* ========================
-   SHELL LAYOUT (admin.html wrapper)
+   SHELL LAYOUT
    ======================== */
 
 .shell {
@@ -171,7 +170,6 @@ body {
   z-index: 10;
 }
 
-/* subtle crosshatch texture */
 .sidebar::before {
   content: '';
   position: absolute;
@@ -180,7 +178,6 @@ body {
   pointer-events: none;
 }
 
-/* Brand / logo strip */
 .sidebar-brand {
   padding: 26px 22px 20px;
   border-bottom: 1px solid var(--sidebar-border);
@@ -220,7 +217,6 @@ body {
   margin-top: 2px;
 }
 
-/* Admin info strip */
 .sidebar-admin {
   padding: 18px 22px;
   border-bottom: 1px solid var(--sidebar-border);
@@ -267,11 +263,8 @@ body {
   margin-top: 2px;
 }
 
-.who .hello {
-  display: none;
-}
+.who .hello { display: none; }
 
-/* Section labels inside nav */
 .nav-section-label {
   font-size: 0.65rem;
   font-weight: 700;
@@ -281,7 +274,6 @@ body {
   padding: 16px 22px 5px;
 }
 
-/* Nav scroll area */
 .side-nav {
   flex: 1;
   overflow-y: auto;
@@ -294,7 +286,6 @@ body {
 
 .side-nav::-webkit-scrollbar { display: none; }
 
-/* Nav links */
 .nav-link {
   display: flex;
   align-items: center;
@@ -327,7 +318,6 @@ body {
   font-weight: 600;
 }
 
-/* green left pill on active */
 .nav-link.active::before {
   content: '';
   position: absolute;
@@ -347,7 +337,6 @@ body {
   display: block;
 }
 
-/* Lucide renders as <svg> inside <i data-lucide> */
 .nav-link i.nav-icon svg,
 .logout-btn i.nav-icon svg {
   width: 17px;
@@ -356,7 +345,6 @@ body {
   display: block;
 }
 
-/* Brand leaf icon */
 .brand-leaf svg {
   width: 18px;
   height: 18px;
@@ -364,7 +352,6 @@ body {
   display: block;
 }
 
-/* Sidebar footer / logout */
 .sidebar-bottom,
 .sidebar-footer {
   padding: 10px;
@@ -408,12 +395,8 @@ body {
   background: var(--bg);
 }
 
-/* When used standalone (inside iframe) — no sidebar offset needed */
-body > .mainwide {
-  margin-left: 0;
-}
+body > .mainwide { margin-left: 0; }
 
-/* ── PAGE BODY (inner iframe pages like overview, users, etc.) ── */
 .page-body {
   padding: 24px 28px 40px;
   max-width: 1200px;
@@ -490,9 +473,7 @@ body > .mainwide {
   transition: box-shadow 0.22s var(--ease), transform 0.22s var(--ease);
 }
 
-.card:hover {
-  box-shadow: var(--shadow-md);
-}
+.card:hover { box-shadow: var(--shadow-md); }
 
 .card-header {
   display: flex;
@@ -517,7 +498,6 @@ body > .mainwide {
   border-radius: 20px;
 }
 
-/* legacy .container alias */
 .container {
   background: var(--surface);
   border-radius: var(--radius-md);
@@ -648,10 +628,9 @@ body > .mainwide {
   justify-content: center;
   padding: 12px 0;
   width: 100%;
-  height: 260px;  /* ← control height here */
+  height: 260px;
 }
 
-/* Chart legend */
 .chart-legend,
 .pie-legend {
   display: flex;
@@ -690,7 +669,6 @@ body > .mainwide {
   color: var(--text-main);
 }
 
-/* No-data state */
 .no-data,
 .no-data-chart {
   display: flex;
@@ -722,7 +700,6 @@ body > .mainwide {
   box-sizing: border-box;
 }
 
-/* ── QUICK STATS TABLE ── */
 .quick-table {
   width: 100%;
   border-collapse: collapse;
@@ -824,7 +801,7 @@ body > .mainwide {
 
 
 /* ========================
-   TOOLBAR (search + filters)
+   TOOLBAR
    ======================== */
 
 .toolbar {
@@ -957,7 +934,6 @@ select {
   transform: none;
 }
 
-/* Small action buttons inside tables */
 .btn-sm {
   display: inline-flex;
   align-items: center;
@@ -988,7 +964,6 @@ select {
   color: var(--green-800);
 }
 
-/* Login button */
 .btn-login {
   width: 100%;
   padding: 13px 24px;
@@ -1151,18 +1126,15 @@ select {
 
 .admin-table td:first-child { text-align: left; }
 .admin-table td:nth-child(2) { text-align: left; }
-.admin-table td:last-child { border-right: none; }
+.admin-table td:last-child { border-right: none; overflow: visible; white-space: nowrap; }
 
-.admin-table tbody tr {
-  transition: background 0.15s;
-}
+.admin-table tbody tr { transition: background 0.15s; }
 
 .admin-table tbody tr:hover {
   background: var(--green-50);
   box-shadow: inset 3px 0 0 var(--green-400);
 }
 
-/* Table footer / export bar */
 .table-footer {
   display: flex;
   align-items: center;
@@ -1179,7 +1151,6 @@ select {
   color: var(--text-muted);
 }
 
-/* Export button */
 .export-btn {
   display: inline-flex;
   align-items: center;
@@ -1398,7 +1369,6 @@ select {
   white-space: nowrap;
 }
 
-/* View Profile button — matches Suspend style */
 .view-profile-btn {
   background: rgba(46,125,50,0.09) !important;
   border: 1px solid rgba(46,125,50,0.18) !important;
@@ -1408,6 +1378,19 @@ select {
 .view-profile-btn:hover {
   background: rgba(46,125,50,0.18) !important;
   border-color: rgba(46,125,50,0.35) !important;
+}
+
+/* ========================
+   NO ACTION (Appeals)
+   ======================== */
+
+.no-action {
+  font-size: 0.82rem;
+  color: #bbb;
+  font-style: italic;
+  white-space: nowrap;
+  display: block;
+  text-align: center;
 }
 
 
@@ -1567,12 +1550,11 @@ select {
 }
 
 .empty-state .empty-icon { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.6; }
-
 .empty-state p { font-weight: 600; font-size: 0.9rem; }
 
 
 /* ========================
-   AUTH / LOGIN PAGE  (body.home)
+   AUTH / LOGIN PAGE
    ======================== */
 
 body.home {
@@ -1584,7 +1566,6 @@ body.home {
   overflow-x: hidden;
 }
 
-/* ── Background video ── */
 .bg-video {
   position: fixed;
   inset: 0;
@@ -1594,7 +1575,6 @@ body.home {
   z-index: 0;
 }
 
-/* ── Dark overlay on top of the video ── */
 .bg-overlay {
   position: fixed;
   inset: 0;
@@ -1603,13 +1583,11 @@ body.home {
   pointer-events: none;
 }
 
-/* bg-layer sits behind video as a colour fallback */
 body.home .bg-layer {
   background: linear-gradient(155deg, #0d2b14 0%, #1b5e20 55%, #2e7d32 100%);
   z-index: -1;
 }
 
-/* ── NAVBAR ── */
 body.home .navbar {
   position: relative;
   z-index: 10;
@@ -1648,7 +1626,6 @@ body.home .navbar {
 
 .nav-spacer { flex: 1; }
 
-/* ── HERO WRAPPER ── */
 .hero-wrapper {
   position: relative;
   z-index: 2;
@@ -1659,7 +1636,6 @@ body.home .navbar {
   padding: 40px 32px;
 }
 
-/* ── HERO CARD (the two-column container) ── */
 .hero-card {
   display: flex;
   align-items: center;
@@ -1670,7 +1646,6 @@ body.home .navbar {
   margin: 0 auto;
 }
 
-/* ── LEFT PANEL ── */
 .hero-left {
   flex: 1;
   max-width: 580px;
@@ -1726,7 +1701,6 @@ body.home .navbar {
   margin-bottom: 8px;
 }
 
-/* Feature badges row */
 .feature-badges {
   display: flex;
   gap: 16px;
@@ -1749,7 +1723,6 @@ body.home .navbar {
 
 .badge-icon { font-size: 1rem; }
 
-/* ── RIGHT PANEL — LOGIN BOX ── */
 .hero-right {
   flex-shrink: 0;
   width: 380px;
@@ -1762,9 +1735,7 @@ body.home .navbar {
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius-lg);
   padding: 44px 36px 40px;
-  box-shadow:
-    0 8px 32px rgba(0,0,0,0.30),
-    inset 0 1px 0 rgba(255,255,255,0.18);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
 .login-title {
@@ -1777,7 +1748,6 @@ body.home .navbar {
   margin-bottom: 28px;
 }
 
-/* Override global input styles inside the glass login box */
 .login-box input[type="email"],
 .login-box input[type="password"] {
   background: rgba(255, 255, 255, 0.16);
@@ -1805,13 +1775,13 @@ body.home .navbar {
   box-shadow: 0 0 0 3px rgba(100,200,80,0.15);
 }
 
-/* Override label inside login box */
 .login-box label {
   display: block;
   margin-bottom: 0;
   color: transparent;
   font-size: 0;
 }
+
 
 /* ========================
    PLANT LOADER
@@ -1893,9 +1863,7 @@ body.home .navbar {
 .leaf-3 { bottom: 82px; left: 24px; animation: growLeaf 0.35s 0.95s ease forwards; }
 .leaf-4 { bottom: 82px; right: 24px; transform: scaleX(-1); animation: growLeaf 0.35s 1.05s ease forwards; }
 
-@keyframes growStem {
-  to { height: 32px; }
-}
+@keyframes growStem { to { height: 32px; } }
 
 @keyframes growLeaf {
   from { opacity: 0; transform: scale(0); }
@@ -1979,38 +1947,22 @@ body.home .navbar {
 @media (max-width: 1100px) {
   .stats-row,
   .stats-bar { grid-template-columns: repeat(2, 1fr); }
-
   .chart-row { grid-template-columns: 1fr; }
-
   .hero-brand { font-size: 52px; }
 }
 
 @media (max-width: 900px) {
-  .hero-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 32px;
-  }
-
-  .hero-right {
-    width: 100%;
-    max-width: 440px;
-    align-self: center;
-  }
-
+  .hero-card { flex-direction: column; align-items: flex-start; gap: 32px; }
+  .hero-right { width: 100%; max-width: 440px; align-self: center; }
   .hero-left { max-width: 100%; }
 }
 
 @media (max-width: 600px) {
   .stats-row,
   .stats-bar { grid-template-columns: 1fr; }
-
   .hero-wrapper { padding: 24px 16px; }
-
   .hero-brand { font-size: 42px; }
-
   .login-box { padding: 28px 20px; }
-
   .feature-badges { gap: 8px; }
 }
 
@@ -2024,17 +1976,14 @@ body.home .navbar {
 @media (max-width: 768px) {
   .stats-row,
   .stats-bar { grid-template-columns: 1fr; gap: 10px; }
-
   .admin-table { font-size: 0.82rem; }
   .admin-table th,
   .admin-table td { padding: 9px 10px; }
-
   .sidebar {
     position: fixed;
     left: calc(-1 * var(--sidebar-width));
     transition: left 0.3s var(--ease);
     z-index: 30;
   }
-
   .sidebar.open { left: 0; }
 }

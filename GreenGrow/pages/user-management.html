@@ -15,17 +15,12 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  
   <script src="../assets/js/sidebar.js"></script>
+
   <style>
     body { overflow-x: hidden; }
 
-    .stat-icon-wrap i svg {
-      width: 20px;
-      height: 20px;
-      stroke: currentColor;
-      display: block;
-    }
+    .stat-icon-wrap i svg { width: 20px; height: 20px; stroke: currentColor; display: block; }
     .stat-icon-wrap.si-green i { color: var(--green-800); }
     .stat-icon-wrap.si-blue  i { color: var(--blue); }
     .stat-icon-wrap.si-red   i { color: var(--red); }
@@ -33,10 +28,7 @@
     .stats-row-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 22px;
-      width: 100%;
-      box-sizing: border-box;
+      gap: 16px; margin-bottom: 22px; width: 100%; box-sizing: border-box;
     }
     @media (max-width: 700px) { .stats-row-3 { grid-template-columns: 1fr; } }
     @media (max-width: 900px) and (min-width: 701px) { .stats-row-3 { grid-template-columns: repeat(2, 1fr); } }
@@ -54,9 +46,56 @@
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
-
     .actions-cell { gap: 5px; }
     .actions-cell .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+    /* ── CONFIRMATION MODAL ── */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,22,14,0.55);
+      backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .confirm-overlay.open { opacity: 1; pointer-events: all; }
+    .confirm-modal {
+      background: #fff; border-radius: 14px; padding: 32px 28px 24px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(10,22,14,0.18), 0 4px 16px rgba(10,22,14,0.1);
+      transform: translateY(12px) scale(0.97); opacity: 0;
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease;
+    }
+    .confirm-overlay.open .confirm-modal { transform: translateY(0) scale(1); opacity: 1; }
+    .confirm-icon-wrap {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px; font-size: 1.5rem;
+    }
+    .confirm-icon-wrap.ci-warn { background: rgba(229,57,53,0.1); }
+    .confirm-icon-wrap.ci-ok   { background: rgba(46,125,50,0.1); }
+    .confirm-icon-wrap.ci-warn svg { stroke: #e53935; }
+    .confirm-icon-wrap.ci-ok   svg { stroke: #2e7d32; }
+    .confirm-title { font-size: 1.05rem; font-weight: 700; color: #1a2e1d; text-align: center; margin-bottom: 8px; }
+    .confirm-body  { font-size: 0.88rem; color: #556b5a; text-align: center; line-height: 1.55; margin-bottom: 24px; }
+    .confirm-body strong { color: #1a2e1d; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-cancel {
+      flex: 1; padding: 10px; border: 1.5px solid #d4e0d6; border-radius: 8px;
+      background: #fff; color: #556b5a; font-size: 0.88rem; font-weight: 600;
+      font-family: var(--font-body, 'DM Sans', sans-serif); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .confirm-cancel:hover { border-color: #a0b8a4; background: #f5faf6; }
+    .confirm-proceed {
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      font-size: 0.88rem; font-weight: 700;
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      cursor: pointer; transition: opacity 0.15s, transform 0.15s;
+    }
+    .confirm-proceed:hover { opacity: 0.88; transform: translateY(-1px); }
+    .confirm-proceed.cp-danger { background: #e53935; color: #fff; }
+    .confirm-proceed.cp-ok    { background: #2e7d32; color: #fff; }
   </style>
 </head>
 
@@ -83,6 +122,19 @@
     </div>
   </div>
 
+  <!-- CONFIRMATION MODAL -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-icon-wrap" id="confirmIcon"></div>
+      <div class="confirm-title"    id="confirmTitle">Are you sure?</div>
+      <div class="confirm-body"     id="confirmBody"></div>
+      <div class="confirm-actions">
+        <button class="confirm-cancel"  onclick="closeConfirm()">Cancel</button>
+        <button class="confirm-proceed" id="confirmProceed" onclick="runConfirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
@@ -94,46 +146,30 @@
     </div>
   </div>
 
-  <!-- PAGE BODY -->
   <div class="page-body">
 
-    <!-- STAT CARDS -->
     <div class="stats-row-3">
       <div class="stat-card">
         <div class="stat-icon-wrap si-green"><i data-lucide="users"></i></div>
-        <div class="stat-body">
-          <h3 id="statTotal">—</h3>
-          <p>Total Users</p>
-        </div>
+        <div class="stat-body"><h3 id="statTotal">—</h3><p>Total Users</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-blue"><i data-lucide="user-check"></i></div>
-        <div class="stat-body">
-          <h3 id="statActive">—</h3>
-          <p>Active Users</p>
-        </div>
+        <div class="stat-body"><h3 id="statActive">—</h3><p>Active Users</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon-wrap si-red"><i data-lucide="user-x"></i></div>
-        <div class="stat-body">
-          <h3 id="statSuspended">—</h3>
-          <p>Suspended</p>
-        </div>
+        <div class="stat-body"><h3 id="statSuspended">—</h3><p>Suspended</p></div>
       </div>
     </div>
 
-    <!-- MAIN CARD -->
     <div class="card">
-
-      <!-- TOOLBAR -->
       <div class="toolbar">
         <input type="text" id="userSearch" placeholder="Search users by name…" />
 
-        <!-- Role Filter -->
         <div class="filter-wrap" id="roleWrap">
           <button class="filter-btn" onclick="toggleFilterDropdown('roleWrap', event)">
-            <span id="roleLabel">All Roles</span>
-            <span class="arrow">▼</span>
+            <span id="roleLabel">All Roles</span><span class="arrow">▼</span>
           </button>
           <div class="filter-dropdown" id="roleDropdown">
             <p>Filter by role</p>
@@ -143,43 +179,30 @@
           </div>
         </div>
 
-        <!-- Status Filter -->
         <div class="filter-wrap" id="statusWrap">
           <button class="filter-btn" onclick="toggleFilterDropdown('statusWrap', event)">
-            <span id="statusLabel">All Status</span>
-            <span class="arrow">▼</span>
+            <span id="statusLabel">All Status</span><span class="arrow">▼</span>
           </button>
           <div class="filter-dropdown" id="statusDropdown">
             <p>Filter by status</p>
-            <button class="filter-option selected"  data-value="all"       onclick="selectFilter('status', 'all',       'All Status', event)">All Status</button>
-            <button class="filter-option"           data-value="active"    onclick="selectFilter('status', 'active',    'Active',     event)">Active</button>
-            <button class="filter-option"           data-value="suspended" onclick="selectFilter('status', 'suspended', 'Suspended',  event)">Suspended</button>
+            <button class="filter-option selected" data-value="all"       onclick="selectFilter('status', 'all',       'All Status', event)">All Status</button>
+            <button class="filter-option"          data-value="active"    onclick="selectFilter('status', 'active',    'Active',     event)">Active</button>
+            <button class="filter-option"          data-value="suspended" onclick="selectFilter('status', 'suspended', 'Suspended',  event)">Suspended</button>
           </div>
         </div>
       </div>
 
-      <!-- TABLE -->
       <div class="table-wrap">
         <table class="admin-table">
           <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Reason</th>
-              <th>Actions</th>
-            </tr>
+            <tr><th>#</th><th>Name</th><th>Role</th><th>Status</th><th>Reason</th><th>Actions</th></tr>
           </thead>
           <tbody id="usersTable">
-            <tr>
-              <td colspan="6" style="text-align:center; padding:28px; color:var(--text-muted);">Loading users…</td>
-            </tr>
+            <tr><td colspan="6" style="text-align:center; padding:28px; color:var(--text-muted);">Loading users…</td></tr>
           </tbody>
         </table>
       </div>
 
-      <!-- TABLE FOOTER -->
       <div class="table-footer">
         <span class="table-footer-count" id="footerCount">Loading…</span>
         <button class="export-btn" onclick="exportToExcel()">
@@ -191,7 +214,6 @@
           Export to Excel
         </button>
       </div>
-
     </div>
   </div>
 
@@ -212,31 +234,44 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
-    
+
     const SUSPEND_REASONS = ['Violation of Terms', 'Suspicious Activity', 'Fraud', 'Spam'];
     const AVATAR_COLORS   = ['#2e7d32','#1565c0','#6a1b9a','#c62828','#ef6c00','#00838f','#37474f','#558b2f'];
 
-    let allUsers = [];
+    let allUsers      = [];
     let activeFilters = { role: 'all', status: 'all' };
-    let unsubUsers = null;
+    let unsubUsers    = null;
+    let pendingAction = null;
 
-    // ✅ FIXED: handles Firestore Timestamp, ISO string, and plain Date
     function formatDate(val) {
       if (!val) return '—';
       let d;
-      if (val?.toDate)               d = val.toDate();        // Firestore Timestamp
-      else if (typeof val === 'string') d = new Date(val);    // ISO string
-      else if (val instanceof Date)   d = val;                 // already a Date
+      if (val?.toDate)                  d = val.toDate();
+      else if (typeof val === 'string') d = new Date(val);
+      else if (val instanceof Date)     d = val;
       else return '—';
       if (isNaN(d.getTime())) return '—';
       return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-    startUsersListener();
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        startUsersListener();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
 
     function startUsersListener() {
       if (unsubUsers) unsubUsers();
-
       unsubUsers = db.collection('users').onSnapshot(snap => {
         allUsers = [];
         snap.forEach(doc => {
@@ -246,9 +281,7 @@
         });
         updateStats(allUsers);
         applyFilters();
-      }, err => {
-        console.error('Users listener error:', err);
-      });
+      }, err => console.error('Users listener error:', err));
     }
 
     function updateStats(users) {
@@ -266,12 +299,10 @@
         const firstName = (u.firstName || '').toLowerCase();
         const lastName  = (u.lastName  || '').toLowerCase();
         const fullName  = (firstName + ' ' + lastName).trim();
-
         const nameMatch = !q
           || firstName.startsWith(q)
           || lastName.startsWith(q)
           || fullName.startsWith(q);
-
         return nameMatch
           && (role   === 'all' || u.role   === role)
           && (status === 'all' || u.status === status);
@@ -337,7 +368,6 @@
 
     function renderUsersTable(users) {
       const tbody = document.getElementById('usersTable');
-
       if (!users.length) {
         tbody.innerHTML = `
           <tr><td colspan="6">
@@ -372,10 +402,12 @@
                <button class="btn-sm" onclick="toggleDropdown('dd-${u.id}', event)">Suspend ▾</button>
                <div class="suspend-dropdown" id="dd-${u.id}">
                  <p>Select reason</p>
-                 ${SUSPEND_REASONS.map(r => `<button class="reason-option" onclick="suspendWithReason('${u.id}', '${r}', event)">${r}</button>`).join('')}
+                 ${SUSPEND_REASONS.map(r =>
+                   `<button class="reason-option" onclick="confirmSuspend('${u.id}', '${fullName.replace(/'/g,"\\'")}', '${r}', event)">${r}</button>`
+                 ).join('')}
                </div>
              </div>`
-          : `<button class="btn-sm approved" onclick="activateUser('${u.id}')">Activate</button>`;
+          : `<button class="btn-sm approved" onclick="confirmActivate('${u.id}', '${fullName.replace(/'/g,"\\'")}')">Activate</button>`;
 
         return `
           <tr>
@@ -399,6 +431,91 @@
       }).join('');
     }
 
+    // ── Confirmation modal ──
+    const ICON_WARN = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>`;
+
+    const ICON_CHECK = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>`;
+
+    function openConfirm({ iconClass, iconSvg, title, body, btnClass, btnLabel, action }) {
+      document.getElementById('confirmIcon').className    = `confirm-icon-wrap ${iconClass}`;
+      document.getElementById('confirmIcon').innerHTML    = iconSvg;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmBody').innerHTML    = body;
+      const btn = document.getElementById('confirmProceed');
+      btn.className   = `confirm-proceed ${btnClass}`;
+      btn.textContent = btnLabel;
+      pendingAction   = action;
+      document.getElementById('confirmOverlay').classList.add('open');
+    }
+
+    function closeConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('open');
+    pendingAction = null;
+    }
+
+    function runConfirmAction() {
+    if (typeof pendingAction !== 'function') return;
+    const action = pendingAction;
+    closeConfirm();
+    action();
+    }
+
+    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeConfirm();
+    });
+
+    function confirmSuspend(userId, userName, reason, e) {
+      e.stopPropagation();
+      closeAllDropdowns();
+      openConfirm({
+        iconClass: 'ci-warn',
+        iconSvg:   ICON_WARN,
+        title:     'Suspend User?',
+        body:      `You're about to <strong>suspend</strong> the account of <strong>${userName}</strong> for <strong>${reason}</strong>. They will lose access until reactivated.`,
+        btnClass:  'cp-danger',
+        btnLabel:  'Yes, Suspend',
+        action:    () => suspendWithReason(userId, reason),
+      });
+    }
+
+    function confirmActivate(userId, userName) {
+      openConfirm({
+        iconClass: 'ci-ok',
+        iconSvg:   ICON_CHECK,
+        title:     'Activate User?',
+        body:      `You're about to reactivate <strong>${userName}</strong>. Their account will be fully restored.`,
+        btnClass:  'cp-ok',
+        btnLabel:  'Yes, Activate',
+        action:    () => activateUser(userId),
+      });
+    }
+
+    // ── Firebase actions — same as your working code ──
+    async function suspendWithReason(userId, reason) {
+      try {
+        await db.collection('users').doc(userId).update({
+          status: 'suspended', suspendReason: reason, updatedAt: new Date().toISOString()
+        });
+      } catch (err) { console.error('Suspend error:', err); }
+    }
+
+    async function activateUser(userId) {
+      try {
+        await db.collection('users').doc(userId).update({
+          status: 'active',
+          suspendReason: firebase.firestore.FieldValue.delete(),
+          updatedAt: new Date().toISOString()
+        });
+      } catch (err) { console.error('Activate error:', err); }
+    }
+
+    // ── Export ──
     function exportToExcel() {
       if (!allUsers.length) { showToast('No users to export.'); return; }
       const rows = allUsers.map((u, i) => ({
@@ -430,54 +547,32 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
+    // ── Profile modal ──
     function openProfile(userId) {
       const u = allUsers.find(u => u.id === userId);
       if (!u) return;
       const color = AVATAR_COLORS[allUsers.indexOf(u) % AVATAR_COLORS.length];
-
       document.getElementById('modalAvatar').textContent      = getInitials(u);
       document.getElementById('modalAvatar').style.background = color;
       document.getElementById('modalName').textContent        = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
       document.getElementById('modalRole').textContent        = u.role || '—';
-
       document.getElementById('modalBody').innerHTML = [
-        { label: 'Email',          value: u.email  || '—' },
-        { label: 'Phone',          value: u.phone  || '—' },
+        { label: 'Email',          value: u.email         || '—' },
+        { label: 'Phone',          value: u.phone         || '—' },
         { label: 'Status',         value: u.status === 'active' ? 'Active' : u.status === 'suspended' ? 'Suspended' : 'Pending' },
         { label: 'Suspend Reason', value: u.suspendReason || '—' },
-        { label: 'Joined',         value: formatDate(u.createdAt) },   // ✅ FIXED
-        { label: 'Last Updated',   value: formatDate(u.updatedAt) },   // ✅ FIXED
+        { label: 'Joined',         value: formatDate(u.createdAt) },
+        { label: 'Last Updated',   value: formatDate(u.updatedAt) },
       ].map(f => `
         <div class="profile-field">
           <span class="profile-field-label">${f.label}</span>
           <span class="profile-field-value">${f.value}</span>
         </div>`).join('');
-
       document.getElementById('profileModal').classList.add('open');
     }
 
     function closeProfile()           { document.getElementById('profileModal').classList.remove('open'); }
     function closeProfileOnOverlay(e) { if (e.target === document.getElementById('profileModal')) closeProfile(); }
-
-    async function suspendWithReason(userId, reason, e) {
-      e.stopPropagation();
-      closeAllDropdowns();
-      try {
-        await db.collection('users').doc(userId).update({
-          status: 'suspended', suspendReason: reason, updatedAt: new Date().toISOString()
-        });
-      } catch (err) { console.error('Suspend error:', err); }
-    }
-
-    async function activateUser(userId) {
-      try {
-        await db.collection('users').doc(userId).update({
-          status: 'active',
-          suspendReason: firebase.firestore.FieldValue.delete(),
-          updatedAt: new Date().toISOString()
-        });
-      } catch (err) { console.error('Activate error:', err); }
-    }
 
     document.getElementById('userSearch').addEventListener('input', applyFilters);
 
