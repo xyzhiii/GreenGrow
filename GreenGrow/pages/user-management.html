@@ -18,7 +18,19 @@
   <script src="../assets/js/sidebar.js"></script>
 
   <style>
+
+    .topbar {
+    -height: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    }
     body { overflow-x: hidden; }
+
+    /* FIX 1: Match bold title like Listing Management */
+    .topbar-left h1 {
+      font-weight: 700 !important;
+      font-family: 'Playfair Display', Georgia, serif !important;
+    }
 
     .stat-icon-wrap i svg { width: 20px; height: 20px; stroke: currentColor; display: block; }
     .stat-icon-wrap.si-green i { color: var(--green-800); }
@@ -33,7 +45,12 @@
     @media (max-width: 700px) { .stats-row-3 { grid-template-columns: 1fr; } }
     @media (max-width: 900px) and (min-width: 701px) { .stats-row-3 { grid-template-columns: repeat(2, 1fr); } }
 
-    .stat-card { min-width: 0; }
+    /* FIX 2: Fixed stat card size — won't shift with more/less data */
+    .stat-card {
+      min-width: 0;
+      height: 90px;
+      box-sizing: border-box;
+    }
 
     .admin-table { table-layout: fixed; width: 100%; min-width: 680px; }
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
@@ -431,7 +448,6 @@
       }).join('');
     }
 
-    // ── Confirmation modal ──
     const ICON_WARN = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -455,15 +471,15 @@
     }
 
     function closeConfirm() {
-    document.getElementById('confirmOverlay').classList.remove('open');
-    pendingAction = null;
+      document.getElementById('confirmOverlay').classList.remove('open');
+      pendingAction = null;
     }
 
     function runConfirmAction() {
-    if (typeof pendingAction !== 'function') return;
-    const action = pendingAction;
-    closeConfirm();
-    action();
+      if (typeof pendingAction !== 'function') return;
+      const action = pendingAction;
+      closeConfirm();
+      action();
     }
 
     document.getElementById('confirmOverlay').addEventListener('click', function(e) {
@@ -496,7 +512,6 @@
       });
     }
 
-    // ── Firebase actions — same as your working code ──
     async function suspendWithReason(userId, reason) {
       try {
         await db.collection('users').doc(userId).update({
@@ -515,7 +530,6 @@
       } catch (err) { console.error('Activate error:', err); }
     }
 
-    // ── Export ──
     function exportToExcel() {
       if (!allUsers.length) { showToast('No users to export.'); return; }
       const rows = allUsers.map((u, i) => ({
@@ -547,7 +561,6 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ── Profile modal ──
     function openProfile(userId) {
       const u = allUsers.find(u => u.id === userId);
       if (!u) return;

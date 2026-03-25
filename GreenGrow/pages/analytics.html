@@ -230,7 +230,7 @@
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">User Breakdown</div>
-            <div class="chart-card-sub">Customers vs Sellers vs Admins</div>
+            <br>
           </div>
         </div>
         <div id="userBreakdownWrap">
@@ -247,7 +247,7 @@
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">Seller Applications</div>
-            <div class="chart-card-sub">Approved vs Rejected vs Pending</div>
+            <br>
           </div>
         </div>
         <div id="sellerAppsWrap">
@@ -259,7 +259,7 @@
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">Suspension Reasons</div>
-            <div class="chart-card-sub">Why users get suspended</div>
+            
           </div>
         </div>
         <div id="suspendReasonsWrap">
@@ -267,21 +267,6 @@
         </div>
       </div>
 
-    </div>
-
-    <p class="section-label">Appeals</p>
-    <div class="charts-grid-1">
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div>
-            <div class="chart-card-title">Appeals Over Time</div>
-            <div class="chart-card-sub">Monthly appeal volume by outcome</div>
-          </div>
-        </div>
-        <div id="appealsOverTimeWrap">
-          <div class="chart-loading"><div class="spinner"></div> Loading…</div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -565,7 +550,7 @@
     }
 
     function emptyState(msg) {
-      return `<div class="chart-empty"><div class="chart-empty-icon">📭</div><span>${msg}</span></div>`;
+      return `<div class="chart-empty"><div class="chart-empty-icon"></div><span>${msg}</span></div>`;
     }
 
     lucide.createIcons();

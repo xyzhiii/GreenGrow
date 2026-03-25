@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "GreenGrow",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

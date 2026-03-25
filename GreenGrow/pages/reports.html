@@ -581,7 +581,7 @@
     }
 
     function statusBadge(status) {
-      if (status === 'reviewed')  return `<span class="status-badge sb-reviewed">✓ Reviewed</span>`;
+      if (status === 'reviewed')  return `<span class="status-badge sb-reviewed">Reviewed</span>`;
       if (status === 'dismissed') return `<span class="status-badge sb-dismissed">Dismissed</span>`;
       return `<span class="status-badge sb-pending">● Pending</span>`;
     }
@@ -710,24 +710,25 @@
       if (e.target === this) closeConfirm();
     });
 
-    async function markReviewed(reportId) {
-      try {
-        await db.collection('reports').doc(reportId).update({
-          status:     'reviewed',
-          reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        const report = allReports.find(r => r.id === reportId);
-        if (report) report.status = 'reviewed';
-        applyFilters();
-        closeConfirm();
-        document.getElementById('reportModal').classList.remove('open');
-        currentModalId = null;
-        showToast('Report marked as reviewed.');
-      } catch (err) {
-        console.error('Review error:', err);
-        showToast('Something went wrong. Please try again.');
-      }
-    }
+async function markReviewed(reportId) {
+  const report = allReports.find(r => r.id === reportId);
+  try {
+    await db.collection('reports').doc(reportId).update({
+      status:      'reviewed',
+      reviewedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+      productName: report?.productName || '—',  // ← so Cloud Function can read it
+    });
+    if (report) report.status = 'reviewed';
+    applyFilters();
+    closeConfirm();
+    document.getElementById('reportModal').classList.remove('open');
+    currentModalId = null;
+    showToast('Report marked as reviewed.');
+  } catch (err) {
+    console.error('Review error:', err);
+    showToast('Something went wrong. Please try again.');
+  }
+}
 
     // ── Filters ──
     function toggleFilterDropdown(wrapId, e) {

@@ -192,7 +192,7 @@
   <div class="modal-overlay" id="appealModal" onclick="closeModalOnOverlay(event)">
     <div class="appeal-modal">
       <div class="appeal-modal-header" id="modalHeader">
-        <div class="modal-icon" id="modalIcon">💬</div>
+        <div class="modal-icon" id="modalIcon"></div>
         <div>
           <div class="appeal-modal-title" id="modalUserName">—</div>
           <div class="appeal-modal-sub"   id="modalUserEmail">—</div>
@@ -462,8 +462,8 @@
     }
 
     function statusBadgeHtml(status) {
-      if (status === 'approved') return `<span class="status-badge sb-approved">✓ Approved</span>`;
-      if (status === 'rejected') return `<span class="status-badge sb-rejected">✕ Rejected</span>`;
+      if (status === 'approved') return `<span class="status-badge sb-approved">Approved</span>`;
+      if (status === 'rejected') return `<span class="status-badge sb-rejected">Rejected</span>`;
       if (status === 'read')     return `<span class="status-badge sb-read">✓ Read</span>`;
       return `<span class="status-badge sb-pending">● Pending</span>`;
     }
@@ -481,7 +481,7 @@
         const rawMsg   = (m.message || '').trim();
         const shortMsg = rawMsg.length > 60 ? rawMsg.slice(0,60) + '…' : rawMsg || '—';
 
-        const typeBadge   = m.type === 'appeal' ? `<span class="type-badge tb-appeal">⚠ Appeal</span>` : `<span class="type-badge tb-support">💬 Support</span>`;
+        const typeBadge   = m.type === 'appeal' ? `<span class="type-badge tb-appeal">Appeal</span>` : `<span class="type-badge tb-support">Support</span>`;
         const suspendCell = m.type === 'appeal' && m.suspendReason ? `<span class="suspend-reason-badge">${m.suspendReason}</span>` : `<span style="color:var(--text-muted);font-size:0.85rem;">—</span>`;
 
         let actionCell;
@@ -512,7 +512,7 @@
       currentModalId = msgId;
 
       document.getElementById('modalHeader').className = 'appeal-modal-header ' + (m.type === 'appeal' ? 'mh-appeal' : 'mh-support');
-      document.getElementById('modalIcon').textContent      = m.type === 'appeal' ? '⚠️' : '💬';
+      document.getElementById('modalIcon').textContent      = m.type === 'appeal' ? '' : '';
       document.getElementById('modalUserName').textContent  = m.userName || '—';
       document.getElementById('modalUserEmail').textContent = m.userEmail || '—';
       document.getElementById('modalType').textContent      = m.type === 'appeal' ? 'Account Appeal' : 'Support Message';

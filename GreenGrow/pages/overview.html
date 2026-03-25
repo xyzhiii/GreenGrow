@@ -28,18 +28,6 @@
     .pie-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 0; width: 100%; height: 260px; }
     .pie-legend { margin-top: auto; padding-top: 16px; }
 
-    .quick-table { width: 100%; border-collapse: collapse; }
-    .quick-table tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    .quick-table tr:last-child { border-bottom: none; }
-    .quick-table tr:hover { background: var(--green-50); }
-    .quick-table td { padding: 11px 6px; font-size: 0.84rem; }
-    .qt-label { color: var(--text-sub); font-weight: 500; }
-    .qt-val { text-align: right; width: 48px; }
-    .qt-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; padding: 2px 9px; border-radius: 5px; font-size: 0.74rem; font-weight: 700; }
-    .qt-green { background: rgba(67,160,71,0.12); color: var(--green-800); }
-    .qt-amber { background: var(--amber-bg); color: var(--amber); }
-    .qt-red   { background: var(--red-bg);   color: var(--red); }
-
     .chart-period-wrap { position: relative; display: inline-block; }
     .chart-period-btn {
       display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
@@ -64,6 +52,41 @@
     }
     .chart-period-option:hover { background: var(--green-50); }
     .chart-period-option.selected { color: var(--green-800); font-weight: 700; background: rgba(46,125,50,0.06); }
+
+    /* ── Top Products ── */
+    .top-products-list { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+    .tp-item { display: flex; align-items: center; gap: 14px; }
+    .tp-rank {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 800; flex-shrink: 0;
+    }
+    .tp-rank.r1 { background: #fef9c3; color: #a16207; }
+    .tp-rank.r2 { background: #f1f5f9; color: #64748b; }
+    .tp-rank.r3 { background: #fef3e2; color: #c2612a; }
+    .tp-rank.rn { background: rgba(46,125,50,0.08); color: var(--green-800); }
+    .tp-img {
+      width: 44px; height: 44px; border-radius: 10px; object-fit: cover;
+      background: var(--green-50); flex-shrink: 0; border: 1px solid var(--border);
+    }
+    .tp-img-placeholder {
+      width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+      background: var(--green-50); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .tp-info { flex: 1; min-width: 0; }
+    .tp-name {
+      font-size: 0.86rem; font-weight: 600; color: var(--text-main);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tp-name span.tp-seller-inline { font-weight: 400; color: var(--text-sub); }
+    .tp-bar-wrap { margin-top: 6px; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .tp-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #4a8c5c, #81c784); transition: width 0.5s ease; }
+    .tp-right { text-align: right; flex-shrink: 0; }
+    .tp-orders { font-size: 0.88rem; font-weight: 700; color: var(--green-800); }
+    .tp-orders-label { font-size: 0.72rem; color: var(--text-sub); }
+    .tp-empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 24px 0; }
   </style>
 </head>
 
@@ -132,15 +155,10 @@
       </div>
 
       <div class="card">
-        <div class="card-header"><span class="card-title">Quick Stats</span></div>
-        <table class="quick-table">
-          <tr><td class="qt-label">Active Users</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-active">—</span></td></tr>
-          <tr><td class="qt-label">Suspended Users</td><td class="qt-val"><span class="qt-badge qt-red" id="qs-suspended">—</span></td></tr>
-          <tr><td class="qt-label">Pending Applications</td><td class="qt-val"><span class="qt-badge qt-amber" id="qs-pending">—</span></td></tr>
-          <tr><td class="qt-label">Approved Sellers</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-sellers">—</span></td></tr>
-          <tr><td class="qt-label">Customers</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-customers">—</span></td></tr>
-          <tr><td class="qt-label">Total Orders</td><td class="qt-val"><span class="qt-badge qt-green" id="qs-orders">—</span></td></tr>
-        </table>
+        <div class="card-header"><span class="card-title">Top Selling Products</span></div>
+        <div class="top-products-list" id="topProductsList">
+          <p style="color:var(--text-muted);font-size:0.85rem;">Loading…</p>
+        </div>
       </div>
     </div>
 
@@ -175,29 +193,21 @@
       // ── Users: stats + pie ──
       unsubs.push(
         db.collection('users').onSnapshot(snap => {
-          let customers = 0, sellers = 0, active = 0, suspended = 0;
+          let customers = 0, sellers = 0;
           snap.forEach(doc => {
             const d = doc.data();
             if (d.role === 'admin') return;
             if (d.role === 'customer') customers++;
             if (d.role === 'seller')   sellers++;
-            if (d.status === 'active')    active++;
-            if (d.status === 'suspended') suspended++;
           });
           const total = customers + sellers;
           document.getElementById('stat-users').textContent   = total;
           document.getElementById('stat-sellers').textContent = sellers;
-          document.getElementById('qs-active').textContent    = active;
-          document.getElementById('qs-suspended').textContent = suspended;
-          document.getElementById('qs-sellers').textContent   = sellers;
-          document.getElementById('qs-customers').textContent = customers;
           renderPieChart(customers, sellers);
         })
       );
 
-      // ── Real-time Recent Activity ──
-      // Uses roleUpdatedAt for sellers (date they became seller)
-      // Falls back to createdAt for customers or sellers without roleUpdatedAt
+      // ── Recent Activity ──
       unsubs.push(
         db.collection('users')
           .orderBy('createdAt', 'desc')
@@ -205,27 +215,19 @@
           .onSnapshot(snap => {
             const list   = document.getElementById('recentList');
             const events = [];
-
             snap.forEach(doc => {
               const d = doc.data();
               if (d.role === 'admin') return;
-
               const name = [d.firstName, d.lastName].filter(Boolean).join(' ') || 'A user';
-
-              // ── KEY CHANGE: sellers use roleUpdatedAt, customers use createdAt ──
               let rawDate;
               if (d.role === 'seller') {
-                rawDate = d.roleUpdatedAt?.toDate
-                  ? d.roleUpdatedAt.toDate()
-                  : d.createdAt?.toDate
-                  ? d.createdAt.toDate()
+                rawDate = d.roleUpdatedAt?.toDate ? d.roleUpdatedAt.toDate()
+                  : d.createdAt?.toDate ? d.createdAt.toDate()
                   : d.createdAt ? new Date(d.createdAt) : null;
               } else {
-                rawDate = d.createdAt?.toDate
-                  ? d.createdAt.toDate()
+                rawDate = d.createdAt?.toDate ? d.createdAt.toDate()
                   : d.createdAt ? new Date(d.createdAt) : null;
               }
-
               events.push({
                 text: d.role === 'seller' ? `${name} became a seller` : `${name} registered as customer`,
                 time: rawDate ? formatDate(rawDate) : 'recently',
@@ -233,12 +235,7 @@
                 ts:   rawDate ? rawDate.getTime() : 0
               });
             });
-
-            if (!events.length) {
-              list.innerHTML = '<div class="no-activity">No activity yet.</div>';
-              return;
-            }
-
+            if (!events.length) { list.innerHTML = '<div class="no-activity">No activity yet.</div>'; return; }
             events.sort((a, b) => b.ts - a.ts);
             list.innerHTML = events.slice(0, 5).map(e => activityRow(e.text, e.time, e.dot)).join('');
           })
@@ -250,7 +247,6 @@
           .where('applicationStatus', '==', 'pending')
           .onSnapshot(snap => {
             document.getElementById('stat-pending').textContent = snap.size;
-            document.getElementById('qs-pending').textContent   = snap.size;
           })
       );
 
@@ -260,11 +256,99 @@
           .where('status', '==', 'delivered')
           .onSnapshot(snap => {
             document.getElementById('stat-orders').textContent = snap.size;
-            document.getElementById('qs-orders').textContent   = snap.size;
             allOrderDocs = snap.docs;
             renderBarChart(allOrderDocs, currentPeriod);
+            renderTopProducts(allOrderDocs);
           })
       );
+    }
+
+    // ── Top Selling Products ──
+    // 1. Tally sold qty per product name from delivered orders
+    // 2. Look up matching product in `products` collection by name → get real imageUrl + sellerId
+    // 3. Look up seller name from `users` by sellerId
+    async function renderTopProducts(orderDocs) {
+      const container = document.getElementById('topProductsList');
+
+      // Step 1: tally from orders using item.name as key
+      // also store sellerId from item if available
+      const soldMap = {}; // name → { sold, sellerId }
+      orderDocs.forEach(doc => {
+        const items = doc.data().items || [];
+        items.forEach(item => {
+          const name = item.name;
+          if (!name) return;
+          if (!soldMap[name]) {
+            soldMap[name] = { sold: 0, sellerId: item.sellerId || '' };
+          }
+          soldMap[name].sold += item.quantity || 1;
+        });
+      });
+
+      if (!Object.keys(soldMap).length) {
+        container.innerHTML = '<div class="tp-empty">No product data yet.</div>';
+        return;
+      }
+
+      // Step 2: fetch all products, build name → { imageUrl, sellerId } map
+      const productsSnap = await db.collection('products').get();
+      const productByName = {}; // name → { imageUrl, sellerId }
+      productsSnap.forEach(doc => {
+        const d = doc.data();
+        if (d.name) productByName[d.name] = { imageUrl: d.imageUrl || '', sellerId: d.sellerId || '' };
+      });
+
+      // Step 3: build final list, merging order data with product data
+      const list = Object.entries(soldMap).map(([name, data]) => {
+        const product  = productByName[name] || {};
+        const sellerId = product.sellerId || data.sellerId || '';
+        return { name, sold: data.sold, imageUrl: product.imageUrl || '', sellerId };
+      });
+
+      list.sort((a, b) => b.sold - a.sold);
+      const top5    = list.slice(0, 5);
+      const maxSold = top5[0]?.sold || 1;
+
+      // Step 4: fetch seller names from users
+      const uniqueSellerIds = [...new Set(top5.map(p => p.sellerId).filter(Boolean))];
+      const sellerNames = {};
+      await Promise.all(uniqueSellerIds.map(async sid => {
+        try {
+          const snap = await db.collection('users').doc(sid).get();
+          if (snap.exists) {
+            const d = snap.data();
+            sellerNames[sid] = d.fullName || [d.firstName, d.lastName].filter(Boolean).join(' ') || '';
+          }
+        } catch (e) { /* silent */ }
+      }));
+
+      // Step 5: render
+      const rankClass = i => (['r1','r2','r3','rn','rn'])[i] ?? 'rn';
+
+      container.innerHTML = top5.map((p, i) => {
+        const sellerName = sellerNames[p.sellerId] || '';
+        return `
+          <div class="tp-item">
+            <div class="tp-rank ${rankClass(i)}">#${i + 1}</div>
+            ${p.imageUrl
+              ? `<img class="tp-img" src="${p.imageUrl}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+              : ''}
+            <div class="tp-img-placeholder" style="${p.imageUrl ? 'display:none' : ''}">🌱</div>
+            <div class="tp-info">
+              <div class="tp-name">
+                ${p.name}${sellerName ? ` <span class="tp-seller-inline">— ${sellerName}</span>` : ''}
+              </div>
+              <div class="tp-bar-wrap">
+                <div class="tp-bar" style="width:${Math.round((p.sold / maxSold) * 100)}%"></div>
+              </div>
+            </div>
+            <div class="tp-right">
+              <div class="tp-orders">${p.sold}</div>
+              <div class="tp-orders-label">sold</div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     // ── Period dropdown ──
