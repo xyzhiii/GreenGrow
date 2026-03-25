@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Verified — GreenGrow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:  #1a3a1f;
+      --green-mid:   #2d6a35;
+      --green-light: #4caf50;
+      --green-pale:  #e8f5e9;
+      --gold:        #c8a84b;
+      --white:       #fdfef9;
+      --text:        #1a2e1c;
+      --muted:       #5a7060;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--green-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated background blobs */
+    .bg {
+      position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.25;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+    .blob-1 { width: 500px; height: 500px; background: var(--green-light); top: -100px; left: -100px; animation-delay: 0s; }
+    .blob-2 { width: 400px; height: 400px; background: var(--gold);        bottom: -80px; right: -80px; animation-delay: 3s; }
+    .blob-3 { width: 300px; height: 300px; background: #81c784;            top: 40%; left: 50%; animation-delay: 6s; }
+
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.08); }
+    }
+
+    /* Leaf particles */
+    .leaves { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .leaf {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: var(--green-light);
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      opacity: 0;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 0.6; }
+      100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* Card */
+    .card {
+      position: relative; z-index: 1;
+      background: var(--white);
+      border-radius: 24px;
+      padding: 56px 48px 48px;
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08);
+      animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(40px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0)   scale(1); }
+    }
+
+    /* Icon ring */
+    .icon-wrap {
+      width: 88px; height: 88px;
+      background: var(--green-pale);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 28px;
+      position: relative;
+      animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+    }
+    @keyframes pop {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .icon-wrap::after {
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 50%;
+      border: 2px dashed var(--green-light);
+      animation: spin 16s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .checkmark {
+      width: 44px; height: 44px;
+      stroke: var(--green-mid);
+      stroke-width: 2.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .check-path {
+      stroke-dasharray: 60;
+      stroke-dashoffset: 60;
+      animation: draw 0.5s ease 0.7s forwards;
+    }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+
+    /* Brand */
+    .brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 12px;
+      animation: fadein 0.5s ease 0.5s both;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 16px;
+      animation: fadein 0.5s ease 0.6s both;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      animation: fadein 0.5s ease 0.7s both;
+    }
+
+    @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* Button */
+    .btn {
+      display: inline-block;
+      background: var(--green-mid);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 36px;
+      border-radius: 50px;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(45,106,53,0.35);
+      animation: fadein 0.5s ease 0.85s both;
+    }
+    .btn:hover {
+      background: var(--green-light);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(76,175,80,0.4);
+    }
+    .btn:active { transform: translateY(0); }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid #e0ece1;
+      margin: 36px 0 24px;
+      animation: fadein 0.5s ease 0.9s both;
+    }
+
+    .footer-note {
+      font-size: 13px;
+      color: #aabcad;
+      animation: fadein 0.5s ease 1s both;
+    }
+
+    /* States */
+    .state { display: none; }
+    .state.active { display: block; }
+
+    /* Error state colors */
+    .error .icon-wrap { background: #fdecea; }
+    .error .icon-wrap::after { border-color: #e57373; }
+    .error .checkmark { stroke: #c62828; }
+    .error h1 { color: #b71c1c; }
+
+    /* Loading */
+    .loading-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--green-pale);
+      border-top-color: var(--green-mid);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="leaves" id="leaves"></div>
+
+  <div class="card" id="card">
+
+    <!-- LOADING STATE -->
+    <div class="state active" id="state-loading">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <p style="margin:0">Verifying your email…</p>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="state" id="state-success">
+      <div class="brand">GreenGrow</div>
+      <div class="icon-wrap">
+        <svg class="checkmark" viewBox="0 0 44 44">
+          <path class="check-path" d="M10 22 L19 31 L34 14"/>
+        </svg>
+      </div>
+      <h1>Email Verified!</h1>
+      <p>Your GreenGrow account is now active. You can open the app and sign in to start shopping or selling.</p>
+      <a href="#" class="btn" id="btn-open-app">Open GreenGrow App</a>
+      <hr class="divider"/>
+      <p class="footer-note">Didn't register for GreenGrow? You can safely ignore this page.</p>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div class="state error" id="state-error">
+      <div class="brand">GreenGrow</div>
+      <div class="icon-wrap">
+        <svg class="checkmark" viewBox="0 0 44 44">
+          <path class="check-path" d="M14 14 L30 30 M30 14 L14 30"/>
+        </svg>
+      </div>
+      <h1>Link Expired</h1>
+      <p id="error-msg">This verification link has expired or already been used. Please open the GreenGrow app and request a new verification email.</p>
+      <hr class="divider"/>
+      <p class="footer-note">Need help? Contact us at support@greengrow.com</p>
+    </div>
+
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+  <script>
+    // ─── 1. YOUR FIREBASE CONFIG ────────────────────────────────────────
+    // Replace these values with your actual Firebase project config
+    // (Firebase Console → Project Settings → Your apps → Firebase SDK snippet)
+const firebaseConfig = {
+  apiKey:            "AIzaSyA1_zNkhNHzfmtKvJcdMGxTcM2R-7zrwUQ",
+  authDomain:        "greengrow-41922.firebaseapp.com",
+  projectId:         "greengrow-41922",
+  storageBucket:     "greengrow-41922.firebasestorage.app",
+  messagingSenderId: "12959500274",
+  appId:             "1:12959500274:web:d782728c8fd90d3797cd6b"
+};
+    firebase.initializeApp(firebaseConfig);
+
+    // ─── 2. DEEP LINK to open your Android app after verification ───────
+    // Replace with your actual app package name
+    const APP_PACKAGE = "com.example.greengrowwithmvvm";
+    const APP_PLAY_URL  = "https://play.google.com/store/apps/details?id=" + APP_PACKAGE;
+
+    // ─── 3. HELPER: show a state ────────────────────────────────────────
+    function showState(id) {
+      document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ─── 4. HANDLE VERIFICATION ─────────────────────────────────────────
+    // Firebase puts ?mode=verifyEmail&oobCode=XXXX in the URL
+    const params   = new URLSearchParams(window.location.search);
+    const mode     = params.get('mode');
+    const oobCode  = params.get('oobCode');
+
+    if (mode === 'verifyEmail' && oobCode) {
+      firebase.auth().applyActionCode(oobCode)
+        .then(() => {
+          showState('state-success');
+          spawnLeaves();
+        })
+        .catch((err) => {
+          let msg = "This verification link has expired or already been used.";
+          if (err.code === 'auth/invalid-action-code') {
+            msg = "This link is invalid or has already been used. Please request a new one from the app.";
+          } else if (err.code === 'auth/expired-action-code') {
+            msg = "This link has expired. Please open the app and request a new verification email.";
+          }
+          document.getElementById('error-msg').textContent = msg;
+          showState('state-error');
+        });
+    } else {
+      // Someone opened the page without a valid link
+      document.getElementById('error-msg').textContent =
+        "No verification link was found. Please use the link sent to your email.";
+      showState('state-error');
+    }
+
+    // ─── 5. OPEN APP BUTTON ──────────────────────────────────────────────
+    document.getElementById('btn-open-app').addEventListener('click', (e) => {
+      e.preventDefault();
+      // Try to open the app via deep link; fall back to Play Store
+      window.location.href = "intent://open#Intent;scheme=greengrow;package=" + APP_PACKAGE + ";end";
+      setTimeout(() => { window.location.href = APP_PLAY_URL; }, 2000);
+    });
+
+    // ─── 6. CELEBRATION LEAVES ──────────────────────────────────────────
+    function spawnLeaves() {
+      const container = document.getElementById('leaves');
+      const colors = ['#4caf50','#81c784','#c8e6c9','#c8a84b','#a5d6a7'];
+      for (let i = 0; i < 18; i++) {
+        const leaf = document.createElement('div');
+        leaf.className = 'leaf';
+        leaf.style.left     = Math.random() * 100 + 'vw';
+        leaf.style.width    = (8 + Math.random() * 10) + 'px';
+        leaf.style.height   = leaf.style.width;
+        leaf.style.background = colors[Math.floor(Math.random() * colors.length)];
+        leaf.style.animationDuration  = (4 + Math.random() * 5) + 's';
+        leaf.style.animationDelay     = (Math.random() * 3) + 's';
+        container.appendChild(leaf);
+      }
+    }
+  </script>
+</body>
+</html>
