@@ -330,7 +330,10 @@
       const totalUsers     = users.length;
       const activeSellers  = users.filter(u => u.role === 'seller' && u.status === 'active').length;
       const suspended      = users.filter(u => u.status === 'suspended').length;
-      const pendingAppeals = appeals.filter(a => a.resolved !== true).length;
+      const pendingAppeals = appeals.filter(a => {
+      const status = (a.appealStatus || '').toLowerCase().trim();
+      return status !== 'approved';
+      }).length;
 
       document.getElementById('statTotalUsers').textContent     = totalUsers;
       document.getElementById('statActiveSellers').textContent  = activeSellers;
@@ -405,9 +408,20 @@
     // ── 2. User Breakdown (pie — includes admins) ──
     function renderUserBreakdown(users) {
       const wrap      = document.getElementById('userBreakdownWrap');
-      const customers = users.filter(u => u.role === 'customer').length;
-      const sellers   = users.filter(u => u.role === 'seller').length;
-      const admins    = users.filter(u => u.role === 'admin').length;
+    const customers = users.filter(u => {
+    const role = (u.role || '').toLowerCase().trim();
+      return role !== 'admin' && role !== 'seller';
+        }).length;
+
+    const sellers = users.filter(u => {
+    const role = (u.role || '').toLowerCase().trim();
+        return role === 'seller';
+          }).length;
+
+    const admins = users.filter(u => {
+    const role = (u.role || '').toLowerCase().trim();
+        return role === 'admin';
+          }).length;
       const total     = customers + sellers + admins;
 
       if (total === 0) { wrap.innerHTML = emptyState('No user data yet'); return; }

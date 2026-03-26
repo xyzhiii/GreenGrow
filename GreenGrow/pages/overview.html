@@ -53,7 +53,6 @@
     .chart-period-option:hover { background: var(--green-50); }
     .chart-period-option.selected { color: var(--green-800); font-weight: 700; background: rgba(46,125,50,0.06); }
 
-    /* ── Top Products ── */
     .top-products-list { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
     .tp-item { display: flex; align-items: center; gap: 14px; }
     .tp-rank {
@@ -191,14 +190,16 @@
     function startListeners() {
 
       // ── Users: stats + pie ──
+      // FIX: count ALL non-admin users, not just those with exact role === 'customer'
+      // Previously users with missing/unexpected role values were silently dropped.
       unsubs.push(
         db.collection('users').onSnapshot(snap => {
           let customers = 0, sellers = 0;
           snap.forEach(doc => {
             const d = doc.data();
-            if (d.role === 'admin') return;
-            if (d.role === 'customer') customers++;
-            if (d.role === 'seller')   sellers++;
+            if (d.role === 'admin') return;      // skip admins
+            if (d.role === 'seller') sellers++;
+            else customers++;                    // customer, buyer, null, or any other role
           });
           const total = customers + sellers;
           document.getElementById('stat-users').textContent   = total;
@@ -241,14 +242,43 @@
           })
       );
 
-      // ── Pending applications ──
-      unsubs.push(
-        db.collection('sellerApplications')
-          .where('applicationStatus', '==', 'pending')
-          .onSnapshot(snap => {
-            document.getElementById('stat-pending').textContent = snap.size;
-          })
-      );
+      
+          // ── Pending applications ──
+unsubs.push(
+  db.collection('sellerApplications')
+    .onSnapshot(snap => {
+
+      const raw = [];
+      snap.forEach(doc => raw.push({ id: doc.id, ...doc.data() }));
+
+      
+      const latestByUser = {};
+      raw.forEach(app => {
+        const existing = latestByUser[app.userId];
+
+        const newTime = app.appliedAt?.toDate?.() || new Date(app.appliedAt || 0);
+
+        if (!existing) {
+          latestByUser[app.userId] = app;
+        } else {
+          const existingTime = existing.appliedAt?.toDate?.() || new Date(existing.appliedAt || 0);
+          if (newTime > existingTime) {
+            latestByUser[app.userId] = app;
+          }
+        }
+      });
+
+      const apps = Object.values(latestByUser);
+
+      
+      const pendingCount = apps.filter(app => {
+        const status = (app.applicationStatus || 'pending').toLowerCase().trim();
+        return status === 'pending';
+      }).length;
+
+      document.getElementById('stat-pending').textContent = pendingCount;
+    })
+);
 
       // ── Orders ──
       unsubs.push(
@@ -264,15 +294,10 @@
     }
 
     // ── Top Selling Products ──
-    // 1. Tally sold qty per product name from delivered orders
-    // 2. Look up matching product in `products` collection by name → get real imageUrl + sellerId
-    // 3. Look up seller name from `users` by sellerId
     async function renderTopProducts(orderDocs) {
       const container = document.getElementById('topProductsList');
 
-      // Step 1: tally from orders using item.name as key
-      // also store sellerId from item if available
-      const soldMap = {}; // name → { sold, sellerId }
+      const soldMap = {};
       orderDocs.forEach(doc => {
         const items = doc.data().items || [];
         items.forEach(item => {
@@ -290,15 +315,13 @@
         return;
       }
 
-      // Step 2: fetch all products, build name → { imageUrl, sellerId } map
       const productsSnap = await db.collection('products').get();
-      const productByName = {}; // name → { imageUrl, sellerId }
+      const productByName = {};
       productsSnap.forEach(doc => {
         const d = doc.data();
         if (d.name) productByName[d.name] = { imageUrl: d.imageUrl || '', sellerId: d.sellerId || '' };
       });
 
-      // Step 3: build final list, merging order data with product data
       const list = Object.entries(soldMap).map(([name, data]) => {
         const product  = productByName[name] || {};
         const sellerId = product.sellerId || data.sellerId || '';
@@ -309,7 +332,6 @@
       const top5    = list.slice(0, 5);
       const maxSold = top5[0]?.sold || 1;
 
-      // Step 4: fetch seller names from users
       const uniqueSellerIds = [...new Set(top5.map(p => p.sellerId).filter(Boolean))];
       const sellerNames = {};
       await Promise.all(uniqueSellerIds.map(async sid => {
@@ -322,7 +344,6 @@
         } catch (e) { /* silent */ }
       }));
 
-      // Step 5: render
       const rankClass = i => (['r1','r2','r3','rn','rn'])[i] ?? 'rn';
 
       container.innerHTML = top5.map((p, i) => {

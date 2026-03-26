@@ -26,13 +26,21 @@
     .admin-table th { padding: 12px 14px; text-align: center; vertical-align: middle; }
     .admin-table td { padding: 14px 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; text-align: center; }
     .admin-table td:nth-child(2) { white-space: normal; overflow-wrap: break-word; word-break: break-all; text-align: left; padding-left: 12px; }
-    .admin-table td:nth-child(5) { white-space: normal; word-break: break-word; text-align: left; }
-    .admin-table td:nth-child(4) { white-space: normal; word-break: break-word; }
+    /* ── FIX: message cell — clamp to one line, never overflow into adjacent columns ── */
+    .admin-table td:nth-child(5) {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 0;          /* forces the fixed width from th to be respected */
+    }
+    .admin-table td:nth-child(4) { white-space: normal; word-break: break-word; overflow: hidden; max-width: 140px; }
     .admin-table tbody tr:hover td { background: var(--green-50, #f1f8e9); }
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
-    .appeal-message { font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* override overflow:visible for the message cell specifically */
+    .admin-table td:nth-child(5) { overflow: hidden !important; }
+    .appeal-message { font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; display: inline; }
     .type-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 3px 9px; white-space: nowrap; letter-spacing: 0.2px; }
     .type-badge.tb-appeal  { background: rgba(198,40,40,0.08); color: #c62828; border: 1px solid rgba(198,40,40,0.18); }
     .type-badge.tb-support { background: rgba(46,125,50,0.08); color: var(--green-800); border: 1px solid rgba(46,125,50,0.18); }
@@ -88,7 +96,6 @@
     .confirm-proceed.cp-ok   { background: var(--green-800, #2e7d32); color: #fff; }
     .confirm-proceed.cp-red  { background: #c62828; color: #fff; }
     .confirm-proceed.cp-gray { background: #555; color: #fff; }
-    /* ── Review button ── */
     .btn-review {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 5px 14px;
@@ -106,8 +113,6 @@
       box-shadow: 0 3px 10px rgba(21,101,192,0.25);
       transform: translateY(-1px);
     }
-
-    /* ── Review modal ── */
     .review-modal {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -135,7 +140,6 @@
     .review-modal-title { font-family: var(--font-display); font-size: 1.05rem; color: #fff; }
     .review-modal-sub   { font-size: 0.78rem; color: rgba(255,255,255,0.68); margin-top: 3px; }
     .review-modal-body  { padding: 22px 26px 26px; overflow-y: auto; flex: 1; }
-
     .review-info-box {
       background: var(--green-50);
       border: 1px solid rgba(46,125,50,0.10);
@@ -175,10 +179,38 @@
     .review-user-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
     .review-user-value { font-size: 0.88rem; font-weight: 500; color: var(--text-main); text-align: right; }
     .review-action-row { display: flex; gap: 10px; margin-top: 4px; }
-
-    .suspend-reason-badge { display: inline-block; font-size: 0.74rem; background: var(--red-bg); color: var(--red); border: 1px solid rgba(229,57,53,0.18); border-radius: 6px; padding: 3px 8px; font-weight: 700; white-space: nowrap; }
+    .suspend-reason-badge {
+      display: inline-block; font-size: 0.74rem;
+      background: var(--red-bg); color: var(--red);
+      border: 1px solid rgba(229,57,53,0.18); border-radius: 6px;
+      padding: 3px 8px; font-weight: 700;
+      white-space: normal; word-break: break-word; max-width: 100%;
+    }
     .user-email { font-size: 0.74rem; color: var(--text-muted); margin-top: 3px; overflow-wrap: break-word; word-break: break-all; max-width: 170px; }
     .user-name  { font-size: 0.88rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+
+    /* ── Message cell: single-line truncation, no overflow into neighbours ── */
+    .msg-cell-inner {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .msg-cell-inner .appeal-message {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .msg-cell-inner .view-btn {
+      flex-shrink: 0;
+      background: none; border: none;
+      color: var(--green-600); font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; padding: 0;
+      font-family: var(--font-body);
+    }
   </style>
 </head>
 <body>
@@ -260,8 +292,6 @@
         <button class="modal-close" onclick="closeReviewModal()">✕</button>
       </div>
       <div class="review-modal-body">
-
-        <!-- User info -->
         <div class="review-section-label">User Info</div>
         <div class="review-user-row">
           <span class="review-user-label">Name</span>
@@ -275,25 +305,16 @@
           <span class="review-user-label">Submitted</span>
           <span class="review-user-value" id="reviewSubmittedAt">—</span>
         </div>
-
-        <!-- Suspend reason -->
         <div class="review-section-label">Reason for Suspension</div>
         <div class="review-suspend-box" id="reviewSuspendReason">—</div>
-
-        <!-- User's appeal message -->
         <div class="review-section-label">User's Appeal Message</div>
         <div class="review-info-box" id="reviewAppealMessage">—</div>
-
-        <!-- Admin message -->
         <div class="review-section-label">Your Message to the User <span style="color:#c62828;">*</span></div>
         <textarea class="review-textarea" id="reviewAdminMessage" placeholder="Write your response to the user. This message will be shown to them on their next login regardless of your decision…"></textarea>
-
-        <!-- Approve / Reject -->
         <div class="review-action-row">
-          <button class="btn-approve" style="flex:1;padding:10px;" onclick="submitReview('approve')">✓ Approve Appeal</button>
-          <button class="btn-reject"  style="flex:1;padding:10px;" onclick="submitReview('reject')">✕ Reject Appeal</button>
+          <button class="btn-approve" style="flex:1;padding:10px;" onclick="submitReview('approve')">Approve Appeal</button>
+          <button class="btn-reject"  style="flex:1;padding:10px;" onclick="submitReview('reject')">Reject Appeal</button>
         </div>
-
       </div>
     </div>
   </div>
@@ -479,8 +500,7 @@
         const color    = AVATAR_COLORS[m.colorIndex % AVATAR_COLORS.length];
         const { date, time } = formatDate(m.submittedAt || m.createdAt);
         const rawMsg   = (m.message || '').trim();
-        const shortMsg = rawMsg.length > 60 ? rawMsg.slice(0,60) + '…' : rawMsg || '—';
-
+        // Short preview no longer needed — the flex container handles truncation
         const typeBadge   = m.type === 'appeal' ? `<span class="type-badge tb-appeal">Appeal</span>` : `<span class="type-badge tb-support">Support</span>`;
         const suspendCell = m.type === 'appeal' && m.suspendReason ? `<span class="suspend-reason-badge">${m.suspendReason}</span>` : `<span style="color:var(--text-muted);font-size:0.85rem;">—</span>`;
 
@@ -493,13 +513,17 @@
           actionCell = m.status === 'read' ? statusBadgeHtml('read') : `<button class="btn-mark-read" onclick="confirmAction('read','${m.id}')">Mark as Read</button>`;
         }
 
+        const viewBtn = rawMsg.length > 0
+          ? `<button class="view-btn" onclick="openModal('${m.id}')">View</button>`
+          : '';
+
         return `
           <tr>
             <td style="color:var(--text-muted);font-size:0.82rem;">${i+1}</td>
             <td><div class="user-cell"><div class="avatar-init" style="background:${color};">${initials}</div><div><div class="user-name" style="word-break:break-word;white-space:normal;">${m.userName}</div><div class="user-email">${m.userEmail}</div></div></div></td>
             <td>${typeBadge}</td>
             <td>${suspendCell}</td>
-            <td><span class="appeal-message">${shortMsg}</span>${rawMsg.length > 0 ? `<button onclick="openModal('${m.id}')" style="background:none;border:none;color:var(--green-600);font-size:0.78rem;font-weight:700;cursor:pointer;padding:0;margin-left:4px;font-family:var(--font-body);">View</button>` : ''}</td>
+            <td><div class="msg-cell-inner"><span class="appeal-message">${rawMsg || '—'}</span>${viewBtn}</div></td>
             <td><div class="date-cell">${date}<span class="time">${time}</span></div></td>
             <td>${actionCell}</td>
           </tr>`;
@@ -643,7 +667,6 @@
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ── Review Modal ──
     let currentReviewId = null;
 
     function openReviewModal(msgId) {
@@ -698,12 +721,11 @@
           updateData.appealStatus = 'approved';
         } else {
           updateData.appealStatus = 'rejected';
-          updateData.adminReason  = adminMessage; // also save as adminReason for app display
+          updateData.adminReason  = adminMessage;
         }
 
         await db.collection('appeals').doc(msgId).update(updateData);
 
-        // Update local state
         const msg = allMessages.find(m => m.id === msgId);
         if (msg) {
           Object.assign(msg, updateData);

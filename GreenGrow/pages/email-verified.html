@@ -240,7 +240,6 @@
       </div>
       <h1>Email Verified!</h1>
       <p>Your GreenGrow account is now active. You can open the app and sign in to start shopping or selling.</p>
-      <a href="#" class="btn" id="btn-open-app">Open GreenGrow App</a>
       <hr class="divider"/>
       <p class="footer-note">Didn't register for GreenGrow? You can safely ignore this page.</p>
     </div>
@@ -319,13 +318,7 @@ const firebaseConfig = {
       showState('state-error');
     }
 
-    // ─── 5. OPEN APP BUTTON ──────────────────────────────────────────────
-    document.getElementById('btn-open-app').addEventListener('click', (e) => {
-      e.preventDefault();
-      // Try to open the app via deep link; fall back to Play Store
-      window.location.href = "intent://open#Intent;scheme=greengrow;package=" + APP_PACKAGE + ";end";
-      setTimeout(() => { window.location.href = APP_PLAY_URL; }, 2000);
-    });
+
 
     // ─── 6. CELEBRATION LEAVES ──────────────────────────────────────────
     function spawnLeaves() {
