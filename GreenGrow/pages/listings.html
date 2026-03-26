@@ -41,7 +41,7 @@
 
     .admin-table { table-layout: fixed; width: 100%; min-width: 600px; }
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 40px; }
-    .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: auto; }
+    .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 160px; }
     .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 130px; }
     .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 130px; }
     .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 220px; }
@@ -254,6 +254,8 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
+    window.__ggAuthGuard(auth, db);
+
     let currentFilter   = 'all';
     let allApplications = [];
     let unsubscribe     = null;
@@ -318,7 +320,22 @@
       weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
     });
 
-    listenApplications();
+    // ── Only start listening after auth is confirmed ──
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.parent.location.href = 'index.html'; return; }
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || userDoc.data().role !== 'admin') {
+          await auth.signOut();
+          window.parent.location.href = 'index.html';
+          return;
+        }
+        listenApplications();
+      } catch (err) {
+        console.error('Auth error:', err);
+        window.parent.location.href = 'index.html';
+      }
+    });
 
     function listenApplications() {
       if (unsubscribe) unsubscribe();
@@ -372,18 +389,29 @@
       document.getElementById('statRejected').textContent = apps.filter(a => n(a.applicationStatus) === 'rejected').length;
     }
 
-    function applyFilters() {
-      const q = document.getElementById('appSearch').value.toLowerCase().trim();
-      const filtered = allApplications.filter(app => {
-        const matchStatus = currentFilter === 'all' || app.applicationStatus === currentFilter;
-        const nameParts   = app.customerName.toLowerCase().split(' ').filter(Boolean);
-        const fullName    = app.customerName.toLowerCase();
-        const email       = app.customerEmail.toLowerCase();
-        const matchSearch = !q || nameParts.some(p => p.startsWith(q)) || fullName.startsWith(q) || email.startsWith(q);
-        return matchStatus && matchSearch;
-      });
-      renderTable(filtered);
-    }
+   function applyFilters() {
+  const q = document.getElementById('appSearch').value.toLowerCase().trim();
+
+  
+  let filtered = allApplications.filter(app => {
+    const matchStatus = currentFilter === 'all' || app.applicationStatus === currentFilter;
+    const nameParts   = app.customerName.toLowerCase().split(' ').filter(Boolean);
+    const fullName    = app.customerName.toLowerCase();
+    const email       = app.customerEmail.toLowerCase();
+    const matchSearch = !q || nameParts.some(p => p.startsWith(q)) || fullName.startsWith(q) || email.startsWith(q);
+    return matchStatus && matchSearch;
+  });
+
+  
+  filtered.sort((a, b) => {
+    const timeA = a.appliedAt?.toDate?.() || new Date(a.appliedAt || 0);
+    const timeB = b.appliedAt?.toDate?.() || new Date(b.appliedAt || 0);
+    return timeB - timeA; 
+  });
+
+  
+  renderTable(filtered);
+}
 
     function formatDate(val) {
       if (!val) return { date: '—', time: '' };
@@ -472,7 +500,6 @@
           reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // ── KEY CHANGE: write roleUpdatedAt so overview.html can show correct date ──
         const userUpdate = {
           role: newStatus === 'approved' ? 'seller' : 'customer'
         };

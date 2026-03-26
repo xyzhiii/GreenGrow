@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Support Messages — GreenGrow</title>
+  <title>Appeals — GreenGrow</title>
   <link rel="stylesheet" href="../assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,34 +16,46 @@
   <style>
     body { overflow-x: hidden; }
     .admin-table { table-layout: fixed; width: 100%; min-width: 640px; }
+    /* Columns: 1=# | 2=User | 3=Suspend Reason | 4=Message | 5=Submitted | 6=Action */
     .admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 36px; text-align: center; }
     .admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 200px; }
-    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 100px; }
-    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 140px; }
-    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: auto; }
-    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 130px; }
-    .admin-table th:nth-child(7), .admin-table td:nth-child(7) { width: 160px; text-align: center; }
+    .admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 200px; }
+    .admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: auto; }
+    .admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 130px; }
+    .admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 160px; text-align: center; }
     .admin-table th { padding: 12px 14px; text-align: center; vertical-align: middle; }
     .admin-table td { padding: 14px 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; text-align: center; }
-    .admin-table td:nth-child(2) { white-space: normal; overflow-wrap: break-word; word-break: break-all; text-align: left; padding-left: 12px; }
-    /* ── FIX: message cell — clamp to one line, never overflow into adjacent columns ── */
-    .admin-table td:nth-child(5) {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 0;          /* forces the fixed width from th to be respected */
+    .admin-table td:nth-child(2) {
+      white-space: normal;
+      overflow-wrap: break-word;
+      word-break: normal;
+      text-align: left;
+      padding-left: 12px;
     }
-    .admin-table td:nth-child(4) { white-space: normal; word-break: break-word; overflow: hidden; max-width: 140px; }
+    .admin-table td:nth-child(3) {
+      white-space: normal;
+      word-break: break-word;
+      overflow: hidden;
+      max-width: 200px;
+      text-align: left;
+    }
+    .admin-table td:nth-child(4) {
+      white-space: nowrap;
+      overflow: hidden !important;
+      text-overflow: ellipsis;
+      max-width: 0;
+    }
     .admin-table tbody tr:hover td { background: var(--green-50, #f1f8e9); }
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
-    .admin-table, tbody, tr, td { overflow: visible !important; }
-    /* override overflow:visible for the message cell specifically */
-    .admin-table td:nth-child(5) { overflow: hidden !important; }
+    .admin-table, tbody, tr { overflow: visible !important; }
     .appeal-message { font-size: 0.84rem; color: var(--text-sub); line-height: 1.5; display: inline; }
-    .type-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 3px 9px; white-space: nowrap; letter-spacing: 0.2px; }
-    .type-badge.tb-appeal  { background: rgba(198,40,40,0.08); color: #c62828; border: 1px solid rgba(198,40,40,0.18); }
-    .type-badge.tb-support { background: rgba(46,125,50,0.08); color: var(--green-800); border: 1px solid rgba(46,125,50,0.18); }
+
+    /* Type badge — no background, plain colored text */
+    .type-badge { font-size: 0.82rem; font-weight: 600; }
+    .type-badge.tb-appeal  { color: #c62828; }
+    .type-badge.tb-support { color: var(--green-800); }
+
     .btn-approve { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; background: rgba(46,125,50,0.09); border: 1px solid rgba(46,125,50,0.25); border-radius: var(--radius-sm); color: var(--green-800); font-size: 0.76rem; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: background 0.18s, box-shadow 0.18s, transform 0.18s; }
     .btn-approve:hover { background: var(--green-800); color: #fff; box-shadow: 0 3px 10px rgba(46,125,50,0.25); transform: translateY(-1px); }
     .btn-reject { display: inline-flex; align-items: center; justify-content: center; padding: 5px 12px; background: rgba(198,40,40,0.07); border: 1px solid rgba(198,40,40,0.22); border-radius: var(--radius-sm); color: #c62828; font-size: 0.76rem; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: background 0.18s, box-shadow 0.18s, transform 0.18s; }
@@ -179,17 +191,20 @@
     .review-user-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
     .review-user-value { font-size: 0.88rem; font-weight: 500; color: var(--text-main); text-align: right; }
     .review-action-row { display: flex; gap: 10px; margin-top: 4px; }
+
+    /* Suspend reason — no background, plain colored text */
     .suspend-reason-badge {
-      display: inline-block; font-size: 0.74rem;
-      background: var(--red-bg); color: var(--red);
-      border: 1px solid rgba(229,57,53,0.18); border-radius: 6px;
-      padding: 3px 8px; font-weight: 700;
-      white-space: normal; word-break: break-word; max-width: 100%;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #c62828;
+      white-space: normal;
+      word-break: break-word;
+      max-width: 100%;
     }
+
     .user-email { font-size: 0.74rem; color: var(--text-muted); margin-top: 3px; overflow-wrap: break-word; word-break: break-all; max-width: 170px; }
     .user-name  { font-size: 0.88rem; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 
-    /* ── Message cell: single-line truncation, no overflow into neighbours ── */
     .msg-cell-inner {
       display: flex;
       align-items: center;
@@ -322,8 +337,8 @@
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
-      <h1>Support Messages</h1>
-      <p>Messages sent by users via the app</p>
+      <h1>Appeals</h1>
+      <p>Appeals submitted by users</p>
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topbarDate">—</div>
@@ -363,12 +378,12 @@
         <table class="admin-table">
           <thead>
             <tr>
-              <th>#</th><th>User</th><th>Type</th><th>Suspend Reason</th>
+              <th>#</th><th>User</th><th>Suspend Reason</th>
               <th>Message</th><th>Submitted</th><th>Action</th>
             </tr>
           </thead>
           <tbody id="appealsTable">
-            <tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);">Loading messages…</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted);">Loading messages…</td></tr>
           </tbody>
         </table>
       </div>
@@ -492,7 +507,7 @@
     function renderTable(messages) {
       const tbody = document.getElementById('appealsTable');
       if (!messages.length) {
-        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div><p>No messages found.</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📭</div><p>No messages found.</p></div></td></tr>`;
         return;
       }
       tbody.innerHTML = messages.map((m, i) => {
@@ -500,9 +515,12 @@
         const color    = AVATAR_COLORS[m.colorIndex % AVATAR_COLORS.length];
         const { date, time } = formatDate(m.submittedAt || m.createdAt);
         const rawMsg   = (m.message || '').trim();
-        // Short preview no longer needed — the flex container handles truncation
-        const typeBadge   = m.type === 'appeal' ? `<span class="type-badge tb-appeal">Appeal</span>` : `<span class="type-badge tb-support">Support</span>`;
-        const suspendCell = m.type === 'appeal' && m.suspendReason ? `<span class="suspend-reason-badge">${m.suspendReason}</span>` : `<span style="color:var(--text-muted);font-size:0.85rem;">—</span>`;
+        const typeBadge   = m.type === 'appeal'
+          ? `<span class="type-badge tb-appeal">Appeal</span>`
+          : `<span class="type-badge tb-support">Support</span>`;
+        const suspendCell = m.type === 'appeal' && m.suspendReason
+          ? `<span class="suspend-reason-badge">${m.suspendReason}</span>`
+          : `<span style="color:var(--text-muted);font-size:0.85rem;">—</span>`;
 
         let actionCell;
         if (m.type === 'appeal') {
@@ -521,7 +539,6 @@
           <tr>
             <td style="color:var(--text-muted);font-size:0.82rem;">${i+1}</td>
             <td><div class="user-cell"><div class="avatar-init" style="background:${color};">${initials}</div><div><div class="user-name" style="word-break:break-word;white-space:normal;">${m.userName}</div><div class="user-email">${m.userEmail}</div></div></div></td>
-            <td>${typeBadge}</td>
             <td>${suspendCell}</td>
             <td><div class="msg-cell-inner"><span class="appeal-message">${rawMsg || '—'}</span>${viewBtn}</div></td>
             <td><div class="date-cell">${date}<span class="time">${time}</span></div></td>

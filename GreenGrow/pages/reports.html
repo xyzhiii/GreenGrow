@@ -38,6 +38,11 @@
       vertical-align: middle;
       text-align: center;
     }
+
+    .admin-table td:nth-child(5) {
+    padding-left: 18px;
+    padding-right: 18px;
+    }
     .admin-table td:nth-child(2) {
       text-align: left; padding-left: 12px;
       white-space: normal; overflow-wrap: break-word; word-break: break-all;
@@ -51,24 +56,34 @@
     .card { overflow: visible !important; }
     .table-wrap { overflow-x: auto !important; overflow-y: visible !important; width: 100%; }
     .admin-table, tbody, tr, td { overflow: visible !important; }
-
+    
     /* ── Reason badge ── */
     .reason-badge {
       display: inline-block; font-size: 0.72rem; font-weight: 700;
       border-radius: 6px; padding: 3px 9px; white-space: nowrap;
+      min-width: 130px; text-align: center;
     }
-    .reason-badge.rb-explicit {
-      background: rgba(198,40,40,0.08); color: #c62828;
-      border: 1px solid rgba(198,40,40,0.2);
-    }
-    .reason-badge.rb-scam {
-      background: rgba(239,108,0,0.08); color: #e65100;
-      border: 1px solid rgba(239,108,0,0.2);
-    }
-    .reason-badge.rb-desc {
-      background: rgba(21,101,192,0.08); color: #1565c0;
-      border: 1px solid rgba(21,101,192,0.2);
-    }
+    /* Fix spacing inside Reason column */
+.reason-cell {
+  display: flex;
+  justify-content: center;
+  padding: 0 10px;
+}
+.reason-badge.rb-explicit {
+  background: transparent;
+  color: #c62828;
+  border: none;
+}
+.reason-badge.rb-scam {
+  background: transparent;
+  color: #e65100;
+  border: none;
+}
+.reason-badge.rb-desc {
+  background: transparent;
+  color: #1565c0;
+  border: none;
+}
 
     /* ── Status badge ── */
     .status-badge {
@@ -586,56 +601,74 @@
       return `<span class="status-badge sb-pending">● Pending</span>`;
     }
 
-    function renderTable(reports) {
-      const tbody = document.getElementById('reportsTable');
+function renderTable(reports) {
+  const tbody = document.getElementById('reportsTable');
 
-      if (!reports.length) {
-        tbody.innerHTML = `
-          <tr><td colspan="7">
-            <div class="empty-state">
-              <div class="empty-icon">📭</div>
-              <p>No reports found.</p>
-            </div>
-          </td></tr>`;
-        return;
-      }
+  if (!reports.length) {
+    tbody.innerHTML = `
+      <tr><td colspan="7">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No reports found.</p>
+        </div>
+      </td></tr>`;
+    return;
+  }
 
-      tbody.innerHTML = reports.map((r, i) => {
-        const initials       = getInitials(r.reporterName);
-        const color          = AVATAR_COLORS[r.colorIndex % AVATAR_COLORS.length];
-        const { date, time } = formatDate(r.createdAt);
+  tbody.innerHTML = reports.map((r, i) => {
+    const initials       = getInitials(r.reporterName);
+    const color          = AVATAR_COLORS[r.colorIndex % AVATAR_COLORS.length];
+    const { date, time } = formatDate(r.createdAt);
 
-        const actionCell = r.status === 'reviewed'
-          ? statusBadge('reviewed')
-          : `<button class="btn-view-report" onclick="openModal('${r.id}')">View</button>`;
+    const actionCell = r.status === 'reviewed'
+      ? statusBadge('reviewed')
+      : `<button class="btn-view-report" onclick="openModal('${r.id}')">View</button>`;
 
-        return `
-          <tr>
-            <td style="color:var(--text-muted);font-size:0.82rem;">${i + 1}</td>
-            <td>
-              <div class="user-cell">
-                <div class="avatar-init" style="background:${color};">${initials}</div>
-                <div>
-                  <div class="user-name" style="word-break:break-word;white-space:normal;">${r.reporterName}</div>
-                  <div class="user-email">${r.reporterEmail}</div>
-                </div>
+    return `
+      <tr>
+        <td style="color:var(--text-muted);font-size:0.82rem;">${i + 1}</td>
+
+        <td>
+          <div class="user-cell">
+            <div class="avatar-init" style="background:${color};">${initials}</div>
+            <div>
+              <div class="user-name" style="word-break:break-word;white-space:normal;">
+                ${r.reporterName}
               </div>
-            </td>
-            <td style="font-size:0.85rem;font-weight:600;color:var(--text-main);text-align:left;">
-              ${r.productName !== '—' ? r.productName : '<span style="color:var(--text-muted);font-size:0.8rem;font-style:italic;">No product ID</span>'}
-            </td>
-            <td style="font-size:0.84rem;color:var(--text-sub);text-align:left;">
-              ${r.sellerName}<br>
-              <span style="font-size:0.74rem;color:var(--text-muted);">${r.shopName}</span>
-            </td>
-            <td>${reasonBadge(r)}</td>
-            <td>
-              <div class="date-cell">${date}<span class="time">${time}</span></div>
-            </td>
-            <td>${actionCell}</td>
-          </tr>`;
-      }).join('');
-    }
+              <div class="user-email">${r.reporterEmail}</div>
+            </div>
+          </div>
+        </td>
+
+        <td style="font-size:0.85rem;font-weight:600;color:var(--text-main);text-align:left;">
+          ${r.productName !== '—'
+            ? r.productName
+            : '<span style="color:var(--text-muted);font-size:0.8rem;font-style:italic;">No product ID</span>'}
+        </td>
+
+        <!-- ✅ FIXED SELLER COLUMN -->
+        <td style="text-align:left;">
+          <div style="font-weight:600;color:var(--text-main);">
+            ${r.sellerName}
+          </div>
+          <div style="font-size:0.74rem;color:var(--text-muted);">
+            ${r.shopName}
+          </div>
+        </td>
+
+        <td><div class="reason-cell">${reasonBadge(r)}</div></td>
+
+        <td>
+          <div class="date-cell">
+            ${date}
+            <span class="time">${time}</span>
+          </div>
+        </td>
+
+        <td>${actionCell}</td>
+      </tr>`;
+  }).join('');
+}
 
     // ── Detail Modal ──
     function openModal(reportId) {

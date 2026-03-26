@@ -18,15 +18,13 @@
   <script src="../assets/js/sidebar.js"></script>
 
   <style>
-
     .topbar {
-    -height: 72px;
-    height: 72px;
-    flex-shrink: 0;
+      -height: 72px;
+      height: 72px;
+      flex-shrink: 0;
     }
     body { overflow-x: hidden; }
 
-    /* FIX 1: Match bold title like Listing Management */
     .topbar-left h1 {
       font-weight: 700 !important;
       font-family: 'Playfair Display', Georgia, serif !important;
@@ -45,7 +43,6 @@
     @media (max-width: 700px) { .stats-row-3 { grid-template-columns: 1fr; } }
     @media (max-width: 900px) and (min-width: 701px) { .stats-row-3 { grid-template-columns: repeat(2, 1fr); } }
 
-    /* FIX 2: Fixed stat card size — won't shift with more/less data */
     .stat-card {
       min-width: 0;
       height: 90px;
@@ -65,6 +62,33 @@
     .admin-table, tbody, tr, td { overflow: visible !important; }
     .actions-cell { gap: 5px; }
     .actions-cell .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+
+    /* Role badges — black text */
+    .role-customer,
+    .role-seller,
+    .role-admin { color: #1a2e1d; }
+
+    /* Status badges — keep text color, remove background + border */
+    .badge-active,
+    .badge-inactive,
+    .badge-pending {
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    /* Reason badge — red text only, no background */
+    .reason-badge {
+      background: none;
+      border: none;
+      padding: 0;
+      border-radius: 0;
+      color: #e53935;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: normal;
+      word-break: break-word;
+    }
 
     /* ── CONFIRMATION MODAL ── */
     .confirm-overlay {
@@ -117,12 +141,6 @@
 </head>
 
 <body>
-
-  <!-- TOAST -->
-  <div class="toast" id="exportToast">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-    <span id="toastMsg">Excel file downloaded!</span>
-  </div>
 
   <!-- PROFILE MODAL -->
   <div class="modal-overlay" id="profileModal" onclick="closeProfileOnOverlay(event)">
@@ -222,14 +240,6 @@
 
       <div class="table-footer">
         <span class="table-footer-count" id="footerCount">Loading…</span>
-        <button class="export-btn" onclick="exportToExcel()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export to Excel
-        </button>
       </div>
     </div>
   </div>
@@ -312,7 +322,7 @@
       const role   = activeFilters.role;
       const status = activeFilters.status;
 
-      const filtered = allUsers.filter(u => {
+      let filtered = allUsers.filter(u => {
         const firstName = (u.firstName || '').toLowerCase();
         const lastName  = (u.lastName  || '').toLowerCase();
         const fullName  = (firstName + ' ' + lastName).trim();
@@ -323,6 +333,12 @@
         return nameMatch
           && (role   === 'all' || u.role   === role)
           && (status === 'all' || u.status === status);
+      });
+
+      filtered.sort((a, b) => {
+        const nameA = ((a.firstName || '') + ' ' + (a.lastName || '')).toLowerCase();
+        const nameB = ((b.firstName || '') + ' ' + (b.lastName || '')).toLowerCase();
+        return nameA.localeCompare(nameB);
       });
 
       renderUsersTable(filtered);
@@ -528,28 +544,6 @@
           updatedAt: new Date().toISOString()
         });
       } catch (err) { console.error('Activate error:', err); }
-    }
-
-    function exportToExcel() {
-      if (!allUsers.length) { showToast('No users to export.'); return; }
-      const rows = allUsers.map((u, i) => ({
-        '#':              i + 1,
-        'First Name':     u.firstName     || '—',
-        'Last Name':      u.lastName      || '—',
-        'Email':          u.email         || '—',
-        'Phone':          u.phone         || '—',
-        'Role':           u.role          || '—',
-        'Status':         u.status        || '—',
-        'Suspend Reason': u.suspendReason || '—',
-        'Date Joined':    formatDate(u.createdAt),
-        'Last Updated':   formatDate(u.updatedAt),
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      ws['!cols'] = [{wch:5},{wch:16},{wch:16},{wch:30},{wch:16},{wch:12},{wch:12},{wch:22},{wch:22},{wch:22}];
-      XLSX.utils.book_append_sheet(wb, ws, 'Users');
-      XLSX.writeFile(wb, `greengrow_users_${new Date().toISOString().slice(0,10)}.xlsx`);
-      showToast(`✓ ${allUsers.length} users exported successfully!`);
     }
 
     let toastTimer = null;

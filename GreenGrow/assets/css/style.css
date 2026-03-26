@@ -1223,39 +1223,39 @@ select {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
-  background: rgba(67,160,71,0.12);
+  
   color: var(--green-800);
   font-weight: 700;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border: 1px solid rgba(46,125,50,0.18);
+  
 }
 
 .badge-inactive {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
-  background: var(--red-bg);
+  
   color: var(--red);
   font-weight: 700;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border: 1px solid rgba(229,57,53,0.18);
+  
 }
 
 .badge-pending {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
-  background: var(--amber-bg);
+  
   color: var(--amber);
   font-weight: 700;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border: 1px solid rgba(251,140,0,0.18);
+  
 }
 
 

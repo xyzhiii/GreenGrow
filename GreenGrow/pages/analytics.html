@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Analytics & Reports — GreenGrow</title>
+  <title>Analytics — GreenGrow</title>
   <link rel="stylesheet" href="../assets/css/style.css" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="../assets/js/sidebar.js"></script>
 
   <style>
@@ -174,6 +175,39 @@
       animation: spin 0.7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Download link ── */
+    #downloadDataLink {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1b5e20;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      transition: color 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    #downloadDataLink:hover {
+      color: #2e7d32;
+      opacity: 0.8;
+    }
+    #downloadDataLink:disabled {
+      color: var(--text-muted, #aaa);
+      cursor: default;
+      text-decoration: none;
+    }
+
+    /* ── Bottom export bar ── */
+    .export-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 18px 4px 8px;
+    }
   </style>
 </head>
 
@@ -181,7 +215,7 @@
 
   <div class="topbar">
     <div class="topbar-left">
-      <h1>Analytics & Reports</h1>
+      <h1>Analytics</h1>
       <p>Platform insights and data overview</p>
     </div>
     <div class="topbar-right">
@@ -259,7 +293,6 @@
         <div class="chart-card-header">
           <div>
             <div class="chart-card-title">Suspension Reasons</div>
-            
           </div>
         </div>
         <div id="suspendReasonsWrap">
@@ -267,6 +300,10 @@
         </div>
       </div>
 
+    </div>
+
+    <div class="export-bar">
+      <button id="downloadDataLink" onclick="downloadAllData()">Download all data</button>
     </div>
 
   </div>
@@ -299,6 +336,9 @@
     const AMBER      = '#ef6c00';
     const RED        = '#c62828';
 
+    // Cache loaded data for download
+    let _cachedData = null;
+
     auth.onAuthStateChanged(async (user) => {
       if (!user) { window.parent.location.href = 'index.html'; return; }
       try {
@@ -316,35 +356,138 @@
     });
 
     async function loadAll() {
-      const [usersSnap, appsSnap, appealsSnap] = await Promise.all([
-        db.collection('users').get(),
-        db.collection('sellerApplications').get(),
-        db.collection('appeals').get()
-      ]);
+      try {
+        const [usersSnap, appsSnap, appealsSnap, notifSnap, ordersSnap, productsSnap, reportsSnap, shopsSnap] = await Promise.all([
+          db.collection('users').get(),
+          db.collection('sellerApplications').get(),
+          db.collection('appeals').get(),
+          db.collection('notifications').get(),
+          db.collection('orders').get(),
+          db.collection('products').get(),
+          db.collection('reports').get(),
+          db.collection('shops').get()
+        ]);
 
-      const users   = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const apps    = appsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const appeals = appealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const users   = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const apps    = appsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const appeals = appealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Total users includes everyone
-      const totalUsers     = users.length;
-      const activeSellers  = users.filter(u => u.role === 'seller' && u.status === 'active').length;
-      const suspended      = users.filter(u => u.status === 'suspended').length;
-      const pendingAppeals = appeals.filter(a => {
-      const status = (a.appealStatus || '').toLowerCase().trim();
-      return status !== 'approved';
-      }).length;
+        _cachedData = {
+          appeals,
+          notifications:      notifSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          orders:             ordersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          products:           productsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          reports:            reportsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          sellerApplications: apps,
+          shops:              shopsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          users
+        };
 
-      document.getElementById('statTotalUsers').textContent     = totalUsers;
-      document.getElementById('statActiveSellers').textContent  = activeSellers;
-      document.getElementById('statSuspended').textContent      = suspended;
-      document.getElementById('statPendingAppeals').textContent = pendingAppeals;
+        const totalUsers     = users.length;
+        const activeSellers  = users.filter(u => u.role === 'seller' && u.status === 'active').length;
+        const suspended      = users.filter(u => u.status === 'suspended').length;
+        const pendingAppeals = appeals.filter(a => {
+          const status = (a.appealStatus || '').toLowerCase().trim();
+          return status !== 'approved';
+        }).length;
 
-      renderUserGrowth(users);
-      renderUserBreakdown(users);
-      renderSellerApps(apps);
-      renderSuspendReasons(users);
-      renderAppealsOverTime(appeals);
+        document.getElementById('statTotalUsers').textContent     = totalUsers;
+        document.getElementById('statActiveSellers').textContent  = activeSellers;
+        document.getElementById('statSuspended').textContent      = suspended;
+        document.getElementById('statPendingAppeals').textContent = pendingAppeals;
+
+        renderUserGrowth(users);
+        renderUserBreakdown(users);
+        renderSellerApps(apps);
+        renderSuspendReasons(users);
+        
+
+      } catch (err) {
+        console.error('loadAll error:', err);
+        // Show error in all loading states so it doesn't just hang
+        document.querySelectorAll('.chart-loading').forEach(el => {
+          el.innerHTML = '<span style="color:#c62828;font-size:0.82rem;">Failed to load data. Check console.</span>';
+        });
+        document.querySelectorAll('#statTotalUsers,#statActiveSellers,#statSuspended,#statPendingAppeals').forEach(el => {
+          el.textContent = 'Err';
+        });
+      }
+    }
+
+    // ── Flatten Firestore record for Excel ──
+    function flattenRecord(record) {
+      const out = {};
+      for (const [k, v] of Object.entries(record)) {
+        if (v === null || v === undefined) {
+          out[k] = '';
+        } else if (typeof v?.toDate === 'function') {
+          out[k] = v.toDate().toISOString();
+        } else if (Array.isArray(v)) {
+          out[k] = JSON.stringify(v);
+        } else if (typeof v === 'object') {
+          out[k] = JSON.stringify(v);
+        } else {
+          out[k] = v;
+        }
+      }
+      return out;
+    }
+
+    // ── Download all data as XLSX ──
+    async function downloadAllData() {
+      const btn = document.getElementById('downloadDataLink');
+      btn.disabled = true;
+      btn.textContent = 'Downloading…';
+
+      try {
+        // Always fetch fresh — don't rely on partial cache
+        const collNames = ['appeals','notifications','orders','products','reports','sellerApplications','shops','users'];
+        const snaps = await Promise.all(collNames.map(c => db.collection(c).get()));
+        const data = {};
+        collNames.forEach((name, i) => {
+          data[name] = snaps[i].docs.map(d => ({ id: d.id, ...d.data() }));
+        });
+
+        const wb = XLSX.utils.book_new();
+
+        const sheets = [
+          { name: 'Appeals',             rows: data.appeals },
+          { name: 'Notifications',       rows: data.notifications },
+          { name: 'Orders',              rows: data.orders },
+          { name: 'Products',            rows: data.products },
+          { name: 'Reports',             rows: data.reports },
+          { name: 'Seller Applications', rows: data.sellerApplications },
+          { name: 'Shops',               rows: data.shops },
+          { name: 'Users',               rows: data.users }
+        ];
+
+        for (const { name, rows } of sheets) {
+          if (!rows || !rows.length) {
+            const ws = XLSX.utils.aoa_to_sheet([['No data available']]);
+            XLSX.utils.book_append_sheet(wb, ws, name);
+            continue;
+          }
+          const flat = rows.map(flattenRecord);
+          const ws   = XLSX.utils.json_to_sheet(flat);
+
+          // Auto column widths (cap at 40)
+          const headers = Object.keys(flat[0] || {});
+          ws['!cols'] = headers.map((key, i) => ({
+            wch: Math.min(40, flat.reduce((max, row) => Math.max(max, String(row[key] ?? '').length), key.length))
+          }));
+
+          XLSX.utils.book_append_sheet(wb, ws, name);
+        }
+
+        XLSX.writeFile(wb, `greengrow-data-${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+      } catch (err) {
+        console.error('Download failed:', err);
+        alert('Download failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Download all data';
+      }
     }
 
     function getMonthLabel(val) {
@@ -366,7 +509,6 @@
       return labels;
     }
 
-    // ── 1. User Growth ──
     function renderUserGrowth(users) {
       const wrap   = document.getElementById('userGrowthWrap');
       const months = lastNMonths(6);
@@ -405,24 +547,15 @@
       });
     }
 
-    // ── 2. User Breakdown (pie — includes admins) ──
     function renderUserBreakdown(users) {
       const wrap      = document.getElementById('userBreakdownWrap');
-    const customers = users.filter(u => {
-    const role = (u.role || '').toLowerCase().trim();
-      return role !== 'admin' && role !== 'seller';
-        }).length;
-
-    const sellers = users.filter(u => {
-    const role = (u.role || '').toLowerCase().trim();
-        return role === 'seller';
-          }).length;
-
-    const admins = users.filter(u => {
-    const role = (u.role || '').toLowerCase().trim();
-        return role === 'admin';
-          }).length;
-      const total     = customers + sellers + admins;
+      const customers = users.filter(u => {
+        const role = (u.role || '').toLowerCase().trim();
+        return role !== 'admin' && role !== 'seller';
+      }).length;
+      const sellers = users.filter(u => (u.role || '').toLowerCase().trim() === 'seller').length;
+      const admins  = users.filter(u => (u.role || '').toLowerCase().trim() === 'admin').length;
+      const total   = customers + sellers + admins;
 
       if (total === 0) { wrap.innerHTML = emptyState('No user data yet'); return; }
 
@@ -465,7 +598,6 @@
       });
     }
 
-    // ── 3. Seller Applications (pie) ──
     function renderSellerApps(apps) {
       const wrap = document.getElementById('sellerAppsWrap');
       if (!apps.length) { wrap.innerHTML = emptyState('No applications yet'); return; }
@@ -504,7 +636,6 @@
       });
     }
 
-    // ── 4. Suspension Reasons ──
     function renderSuspendReasons(users) {
       const wrap      = document.getElementById('suspendReasonsWrap');
       const suspended = users.filter(u => u.suspendReason);
@@ -531,7 +662,6 @@
       }</div>`;
     }
 
-    // ── 5. Appeals Over Time ──
     function renderAppealsOverTime(appeals) {
       const wrap   = document.getElementById('appealsOverTimeWrap');
       const months = lastNMonths(6);
